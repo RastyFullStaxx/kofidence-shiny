@@ -15,24 +15,12 @@ db_connect <- function() {
     port = 5432,
     dbname = "postgres",
     user = "postgres.qriopzhdbnkxbwtiingz",
-    password = Sys.getenv("SUPABASE_DB_PASSWORD"),
+    password = Sys.getenv("esp.webdev0218"),
     sslmode = "require"
   )
 }
 
-load_data = function() {
-  con <- db_connect()
-  on.exit(DBI::dbDisconnect(con), add = TRUE)
 
-  q <- DBI::dbGetQuery(
-    con,
-    "SELECT data::text AS data FROM app_state WHERE id = 'main'"
-  )
-
-  if (nrow(q) == 0) return(NULL)
-
-  jsonlite::fromJSON(q$data[[1]], simplifyVector = FALSE)
-}
 
 save_data = function(users, all_transactions, promos, promo_id_ctr,
                      store_open_hour, store_close_hour,
@@ -61,6 +49,33 @@ save_data = function(users, all_transactions, promos, promo_id_ctr,
     params = list(json_data)
   )
 }
+
+                     force_close_note, menu_items) {
+  payload = list(
+    users             = users,
+    all_transactions  = all_transactions,
+    promos            = promos,
+    promo_id_ctr      = promo_id_ctr,
+    store_open_hour   = store_open_hour,
+    store_close_hour  = store_close_hour,
+    store_force_close = store_force_close,
+    force_close_note  = force_close_note,
+    menu_items        = menu_items
+  )
+  tryCatch(
+    write(toJSON(payload, auto_unbox = TRUE, null = "null"), DATA_FILE),
+    error = function(e) message("Save error: ", e$message)
+  )
+}
+
+load_data = function() {
+  if (!file.exists(DATA_FILE)) return(NULL)
+  tryCatch(
+    fromJSON(DATA_FILE, simplifyVector = FALSE),
+    error = function(e) { message("Load error: ", e$message); NULL }
+  )
+}
+
 ph_time = function() format(Sys.time(), tz = "Asia/Manila", "%B %d, %Y %I:%M %p")
 
 FEEDBACK_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS-5WLGPmosQJFSUCGThfKXzfB0fWXr0JfOLSZF-ZD7O4JjOBc5ww1NC-3wI3Gors0STulOoZcUTU7e/pub?output=csv"
@@ -1849,8 +1864,6 @@ server = function(input, output, session) {
 }
 
 shinyApp(ui, server)
-
-
 
 
 
