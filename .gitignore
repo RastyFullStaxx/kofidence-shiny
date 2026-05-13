@@ -1,0 +1,23 @@
+﻿# Secrets
+secrets.R
+.env
+.Renviron
+
+# Local app data
+kofidence_data/
+*.json
+
+# R / RStudio
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+*.Rproj
+
+# shinyapps / rsconnect local deploy records
+rsconnect/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vscode/

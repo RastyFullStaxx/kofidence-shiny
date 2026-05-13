@@ -2,6 +2,7 @@
 library(jsonlite)
 library(DBI)
 library(RPostgres)
+source("secrets.R")
 
 DATA_DIR  = "kofidence_data"
 DATA_FILE = file.path(DATA_DIR, "kofidence_data.json")
@@ -15,7 +16,7 @@ db_connect <- function() {
     port = 5432,
     dbname = "postgres",
     user = "postgres.qriopzhdbnkxbwtiingz",
-    password = Sys.getenv("SUPABASE_DB_PASSWORD"),
+    password = SUPABASE_DB_PASSWORD,
     sslmode = "require"
   )
 }
