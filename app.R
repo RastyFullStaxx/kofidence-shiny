@@ -144,9 +144,6 @@ promo_types = c(
 promo_type_labels = c(combo="Combo Deal", bogo="Buy 1 Get 1", percent="% Discount",
                       fixed="Fixed Discount", lto="Limited Time Offer")
 
-promo_type_icons = c(combo="\U0001f37d\ufe0f", bogo="\U0001f381", percent="\U0001f4b8",
-                     fixed="\U0001f3f7\ufe0f", lto="\u23f3")
-
 recurring_opts = c(
   "None (one-time)"="none", "Every day"="daily", "Every Monday"="mon",
   "Every Tuesday"="tue", "Every Wednesday"="wed", "Every Thursday"="thu",
@@ -292,32 +289,32 @@ promo_detail_lines = function(p) {
       paste(p$combo_items[1], "+", p$combo_items[2])
     else "Drink + Snack combo"
     if (!is.null(p$disc_price) && !is.na(p$disc_price) && p$disc_price > 0)
-      lines = c(lines, paste0("\U0001f4b0 Deal: ", d, " for only P", p$disc_price))
+      lines = c(lines, paste0("Deal: ", d, " for only P", p$disc_price))
     else
-      lines = c(lines, paste0("\U0001f37d\ufe0f Combo: ", d))
+      lines = c(lines, paste0("Combo: ", d))
     
   } else if (p$type == "bogo") {
     item = if (!is.null(p$bogo_item) && nchar(p$bogo_item) > 0) p$bogo_item else "selected item"
-    lines = c(lines, paste0("\U0001f381 Buy 1 Get 1 FREE on: ", item))
+    lines = c(lines, paste0("Buy 1 Get 1 FREE on: ", item))
     
   } else if (p$type == "percent") {
     pct_val = if (!is.null(p$pct) && !is.na(p$pct)) paste0(p$pct, "%") else ""
     applies = if (!is.null(p$pct_applies) && nchar(trimws(p$pct_applies)) > 0) p$pct_applies else "select items"
-    lines = c(lines, paste0("\U0001f4b8 ", pct_val, " OFF on: ", applies))
+    lines = c(lines, paste0(pct_val, " OFF on: ", applies))
     
   } else if (p$type == "fixed") {
     disc_val = if (!is.null(p$fixed_disc) && !is.na(p$fixed_disc)) paste0("P", p$fixed_disc, " off") else ""
     fixed_items = item_label(p$fixed_items %||% p$fixed_item, "selected items")
-    if (nchar(disc_val) > 0) lines = c(lines, paste0("\U0001f3f7\ufe0f Discount: ", disc_val, " on: ", fixed_items))
+    if (nchar(disc_val) > 0) lines = c(lines, paste0("Discount: ", disc_val, " on: ", fixed_items))
     if (!is.null(p$fixed_min) && !is.na(p$fixed_min) && p$fixed_min > 0)
-      lines = c(lines, paste0("\U0001f4cb Min. spend: P", p$fixed_min))
+      lines = c(lines, paste0("Min. spend: P", p$fixed_min))
     
   } else if (p$type == "lto") {
     item = if (!is.null(p$bogo_item) && nchar(p$bogo_item) > 0) p$bogo_item else "featured item"
     if (!is.null(p$disc_price) && !is.na(p$disc_price) && p$disc_price > 0)
-      lines = c(lines, paste0("\u23f3 LTO Price: ", item, " for P", p$disc_price))
+      lines = c(lines, paste0("LTO Price: ", item, " for P", p$disc_price))
     else
-      lines = c(lines, paste0("\u23f3 Limited Offer: ", item))
+      lines = c(lines, paste0("Limited Offer: ", item))
   }
   
   has_start = !is.null(p$start_date) && nchar(p$start_date) > 0
@@ -325,16 +322,16 @@ promo_detail_lines = function(p) {
   if (has_start && has_end) {
     s = format(as.POSIXct(p$start_date), "%b %d, %Y")
     e = format(as.POSIXct(p$end_date),   "%b %d, %Y")
-    lines = c(lines, paste0("\U0001f4c5 Valid: ", s, " \u2013 ", e))
+    lines = c(lines, paste0("Valid: ", s, " \u2013 ", e))
   } else if (has_end) {
     e = format(as.POSIXct(p$end_date), "%b %d, %Y")
-    lines = c(lines, paste0("\U0001f4c5 Until: ", e))
+    lines = c(lines, paste0("Until: ", e))
   }
 
   rec = p$recurring %||% "none"
   if (rec != "none") {
     rl = recurring_labels[rec]
-    if (!is.na(rl)) lines = c(lines, paste0("\U0001f501 Schedule: ", rl))
+    if (!is.na(rl)) lines = c(lines, paste0("Schedule: ", rl))
   }
   
   lines
@@ -404,7 +401,9 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .btn-secondary:hover{border-color:var(--brown-warm);color:var(--brown-warm);}
 .or-divider{display:flex;align-items:center;gap:10px;margin:0.75rem 0;font-size:11px;color:var(--gray-muted);}
 .or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--gray-light);}
-.inner-page{position:relative;z-index:5;min-height:calc(100vh - 58px);padding:2rem 2.5rem;background:linear-gradient(180deg,rgba(23,17,12,0.12),rgba(23,17,12,0.32));}
+.kof-icon{display:inline-flex;align-items:center;justify-content:center;color:var(--gold);line-height:1;}
+.kof-icon svg{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block;}
+.inner-page{position:relative;z-index:5;min-height:calc(100vh - 58px);padding:2rem clamp(1rem,3vw,2.5rem);background:linear-gradient(180deg,rgba(23,17,12,0.12),rgba(23,17,12,0.32));width:min(100%,1280px);margin:0 auto;}
 .dash-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
 .dash-greet{font-family:'Playfair Display',serif;font-size:30px;color:var(--white);}
 .dash-greet span{color:var(--gold);font-style:italic;}
@@ -454,7 +453,7 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:2rem;}
 .admin-btn{height:80px;background:var(--panel-warm);border:1px solid var(--line-gold);border-radius:14px;color:var(--white);font-family:'Playfair Display',serif;font-size:16px;cursor:pointer;transition:all 0.2s;box-shadow:0 12px 32px rgba(16,9,4,0.18);}
 .admin-btn:hover{background:rgba(200,134,29,0.12);border-color:rgba(200,134,29,0.4);}
-.admin-food-row{display:grid;grid-template-columns:1fr 130px 160px;align-items:center;gap:8px;background:rgba(42,25,13,0.54);border:1px solid rgba(242,192,99,0.16);border-radius:11px;padding:11px 14px;margin-bottom:8px;box-shadow:0 8px 22px rgba(16,9,4,0.14);}
+.admin-food-row{display:grid;grid-template-columns:minmax(0,1fr) 130px 110px;align-items:center;gap:10px;background:rgba(42,25,13,0.54);border:1px solid rgba(242,192,99,0.16);border-radius:11px;padding:11px 14px;margin-bottom:8px;box-shadow:0 8px 22px rgba(16,9,4,0.14);}
 .admin-food-status-col{display:flex;align-items:center;justify-content:center;}
 .admin-food-btn-col{display:flex;align-items:center;justify-content:flex-end;}
 .txn-card{background:rgba(42,25,13,0.54);border:1px solid rgba(242,192,99,0.16);border-radius:11px;padding:14px 16px;margin-bottom:10px;box-shadow:0 8px 22px rgba(16,9,4,0.14);}
@@ -467,15 +466,16 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .txn-pts-plus{color:#6fcf97;font-size:13px;margin:2px 0;}
 .txn-pts-minus{color:#eb5757;font-size:13px;margin:2px 0;}
 .txn-stamp{color:var(--amber);font-size:13px;margin:2px 0;}
-.cust-card{background:rgba(42,25,13,0.56);border:1px solid rgba(242,192,99,0.18);border-radius:12px;padding:15px 16px;margin-bottom:12px;box-shadow:0 10px 26px rgba(16,9,4,0.16);}
+.cust-card{background:rgba(42,25,13,0.56);border:1px solid rgba(242,192,99,0.18);border-radius:12px;padding:16px 18px;margin-bottom:12px;box-shadow:0 10px 26px rgba(16,9,4,0.16);}
 .cust-name{color:var(--white);font-size:15px;font-weight:600;}
 .cust-meta{color:var(--gray-muted);font-size:12.5px;margin:2px 0;}
 .cust-pts{color:var(--gold);font-size:14px;font-weight:600;}
-.cust-action-btn{padding:7px 12px;border-radius:8px;border:1px solid rgba(242,192,99,0.3);background:rgba(200,134,29,0.12);color:var(--gold);font-size:12.5px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:5px;width:100%;transition:all 0.2s;}
+.cust-card .col-sm-5{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+.cust-action-btn{padding:7px 13px;border-radius:8px;border:1px solid rgba(242,192,99,0.3);background:rgba(200,134,29,0.12);color:var(--gold);font-size:12.5px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:0;width:min(100%,260px);transition:all 0.2s;}
 .cust-action-btn:hover{background:rgba(200,134,29,0.24);border-color:rgba(242,192,99,0.5);}
 .cust-delete-btn{border-color:rgba(235,87,87,0.42)!important;background:rgba(235,87,87,0.1)!important;color:#ff8585!important;}
 .cust-delete-btn:hover{background:rgba(235,87,87,0.2)!important;}
-.expand-panel{background:rgba(14,9,5,0.34);border-radius:11px;padding:14px;margin-top:12px;border:1px solid rgba(242,192,99,0.16);}
+.expand-panel{background:rgba(14,9,5,0.34);border-radius:12px;padding:18px;margin:16px auto 0;border:1px solid rgba(242,192,99,0.16);max-width:820px;}
 .kof-num-input{width:100%;height:40px;border:1.5px solid rgba(200,134,29,0.25);border-radius:8px;padding:0 12px;background:rgba(255,255,255,0.06);color:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;margin-bottom:8px;}
 .kof-num-input:focus{border-color:var(--amber);}
 .kof-check-row{display:flex;align-items:center;gap:8px;color:var(--gray-muted);font-size:13px;margin-bottom:6px;}
@@ -483,7 +483,7 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .preview-box{background:rgba(200,134,29,0.08);border:1px solid rgba(200,134,29,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;}
 .preview-box p{color:var(--gray-muted);font-size:13px;margin:2px 0;}
 .preview-box .preview-total{color:var(--gold);font-weight:600;font-size:14px;}
-.confirm-btn{width:100%;height:42px;background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;border-radius:8px;color:white;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;}
+.confirm-btn{width:min(100%,360px);height:42px;background:linear-gradient(135deg,#1f8f50,#2cbf6a);border:1px solid rgba(255,255,255,0.12);border-radius:9px;color:white;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;display:block;margin:10px auto 0;}
 .promo-card{background:rgba(200,134,29,0.1);border:1px solid rgba(242,192,99,0.28);border-radius:12px;padding:16px 18px;margin-bottom:12px;box-shadow:0 10px 28px rgba(16,9,4,0.14);}
 .promo-title-text{color:var(--white);font-size:15px;font-weight:600;margin-bottom:8px;}
 .promo-detail-text{color:var(--gray-muted);font-size:13px;margin:2px 0;}
@@ -512,13 +512,16 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .expiry-table{width:100%;border-collapse:collapse;font-size:13px;}
 .expiry-table th{border-bottom:1px solid rgba(200,134,29,0.2);padding:6px;text-align:left;color:var(--gray-muted);font-size:12px;}
 .expiry-table td{padding:6px;border-bottom:1px solid rgba(255,255,255,0.05);color:var(--white);font-size:13px;}
-.modal-header,.modal-footer{background:var(--brown-deep)!important;color:var(--gold)!important;}
+.modal-dialog{margin:6vh auto!important;}
+.modal-header,.modal-footer{background:var(--brown-deep)!important;color:var(--gold)!important;border-color:rgba(242,192,99,0.18)!important;padding:14px 18px!important;}
 .modal-title{color:var(--gold)!important;font-family:'Playfair Display',serif!important;}
-.modal-content{background:var(--gray-mid)!important;color:var(--white)!important;border:1px solid rgba(200,134,29,0.3)!important;}
-.modal-body{color:var(--white)!important;}
+.modal-content{background:linear-gradient(145deg,rgba(55,34,20,0.98),rgba(38,30,26,0.98))!important;color:var(--white)!important;border:1px solid rgba(200,134,29,0.35)!important;border-radius:14px!important;box-shadow:0 24px 70px rgba(0,0,0,0.45)!important;overflow:hidden;}
+.modal-body{color:var(--white)!important;padding:18px!important;}
 .modal-body label,.modal-body p,.modal-body h4,.modal-body h5{color:var(--white)!important;}
-.modal-body input,.modal-body select,.modal-body .form-control{background:rgba(255,255,255,0.08)!important;color:var(--white)!important;border:1px solid rgba(200,134,29,0.25)!important;border-radius:6px!important;}
+.modal-body input,.modal-body select,.modal-body .form-control{background:rgba(255,255,255,0.08)!important;color:var(--white)!important;border:1px solid rgba(200,134,29,0.3)!important;border-radius:8px!important;min-height:38px!important;}
 .modal-body input[type=checkbox]{width:16px;height:16px;accent-color:var(--amber);}
+.modal-footer{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;flex-wrap:wrap!important;}
+.modal-footer .btn,.modal-footer button{margin:0!important;border-radius:8px!important;padding:8px 14px!important;}
 .btn-default{background:rgba(255,255,255,0.08)!important;color:var(--white)!important;border:1px solid rgba(200,134,29,0.2)!important;}
 .btn-default:hover{background:rgba(200,134,29,0.15)!important;}
 .shiny-notification{background:var(--brown-deep)!important;color:var(--gold)!important;border:1px solid var(--amber)!important;border-radius:10px!important;}
@@ -529,7 +532,7 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .info-value{color:var(--white);font-size:15px;}
 .info-link{color:var(--gold)!important;font-weight:600;}
 .social-links-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
-.social-link-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;font-size:13.5px;font-weight:600;text-decoration:none;transition:opacity 0.2s;}
+.social-link-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:8px;font-size:13.5px;font-weight:600;text-decoration:none;transition:opacity 0.2s;}
 .social-link-fb{background:rgba(24,119,242,0.18);border:1px solid rgba(24,119,242,0.4);color:#5b9cf6!important;}
 .social-link-ig{background:rgba(225,48,108,0.15);border:1px solid rgba(225,48,108,0.4);color:#f06292!important;}
 .social-link-tt{background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.25);color:#ffffff!important;}
@@ -595,6 +598,8 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
   .feature-row{grid-template-columns:repeat(2,minmax(130px,1fr));gap:20px 0;}
   .perk:nth-child(2){border-right:none;}
   .menu-layout{grid-template-columns:1fr;}
+  .cust-card .col-sm-5{align-items:stretch;margin-top:12px;}
+  .cust-action-btn{width:100%;}
 }
 @media (max-width:640px){
   .brand-logo{font-size:20px;}
@@ -611,6 +616,7 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
   .admin-grid{grid-template-columns:1fr;}
   .menu-item-row,.admin-food-row{grid-template-columns:1fr;align-items:flex-start;}
   .menu-item-status-col,.menu-item-btn-col,.admin-food-status-col,.admin-food-btn-col{justify-content:flex-start;}
+  .confirm-btn{width:100%;}
   .page-card{padding:1.2rem;}
 }
 "
@@ -652,19 +658,49 @@ grand_k_emblem = tags$svg(
   tags$text(x="85", y="88", class="emblem-k", "K")
 )
 
+kof_icon = function(name, class="kof-icon") {
+  paths = switch(name,
+    cup = tagList(
+      tags$path(d="M8 10h13v8a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6z"),
+      tags$path(d="M21 12h3a3 3 0 0 1 0 6h-3"),
+      tags$path(d="M7 27h16")
+    ),
+    user = tagList(
+      tags$circle(cx="16", cy="10", r="5"),
+      tags$path(d="M7 27c1.2-6 16.8-6 18 0"),
+      tags$path(d="M9 27h14")
+    ),
+    gift = tagList(
+      tags$rect(x="7", y="12", width="18", height="14", rx="2"),
+      tags$path(d="M16 12v14M7 17h18"),
+      tags$path(d="M16 12c-4-1-6-5-3-6 2-1 3 2 3 6zM16 12c4-1 6-5 3-6-2-1-3 2-3 6z")
+    ),
+    star = tagList(tags$path(d="M16 5l3.2 6.5 7.1 1-5.1 5 1.2 7-6.4-3.4-6.4 3.4 1.2-7-5.1-5 7.1-1z")),
+    card = tagList(tags$rect(x="5", y="8", width="22", height="16", rx="3"), tags$path(d="M5 13h22M9 19h5")),
+    menu = tagList(tags$path(d="M8 7h16M8 14h16M8 21h16")),
+    cart = tagList(tags$path(d="M6 7h3l2 12h11l3-8H11"), tags$circle(cx="13", cy="24", r="1.7"), tags$circle(cx="22", cy="24", r="1.7")),
+    medal = tagList(tags$circle(cx="16", cy="17", r="6"), tags$path(d="M12 4l4 7 4-7M13 17l2 2 4-4")),
+    dots = tagList(tags$circle(cx="9", cy="16", r="1.8"), tags$circle(cx="16", cy="16", r="1.8"), tags$circle(cx="23", cy="16", r="1.8")),
+    link = tagList(tags$path(d="M12 17l8-8a4 4 0 0 1 6 6l-3 3"), tags$path(d="M20 15l-8 8a4 4 0 0 1-6-6l3-3")),
+    feedback = tagList(tags$path(d="M7 7h18v13H12l-5 5z"), tags$path(d="M11 12h10M11 16h7")),
+    tagList(tags$circle(cx="16", cy="16", r="10"))
+  )
+  tags$span(class=class, tags$svg(viewBox="0 0 32 32", xmlns="http://www.w3.org/2000/svg", paths))
+}
+
 social_links = function() {
   tags$div(class="social-links-row",
-           tags$a(href="https://www.facebook.com/share/1au4kqcApA/", target="_blank", class="social-link-btn social-link-fb", "\U0001f426 Facebook"),
-           tags$a(href="https://www.instagram.com/kofi.dence", target="_blank", class="social-link-btn social-link-ig", "\U0001f4f8 Instagram"),
-           tags$a(href="https://www.tiktok.com/@kofi.dence?is_from_webapp=1&sender_device=pc", target="_blank", class="social-link-btn social-link-tt", "\U0001f3b5 TikTok")
+           tags$a(href="https://www.facebook.com/share/1au4kqcApA/", target="_blank", class="social-link-btn social-link-fb", kof_icon("link"), "Facebook"),
+           tags$a(href="https://www.instagram.com/kofi.dence", target="_blank", class="social-link-btn social-link-ig", kof_icon("link"), "Instagram"),
+           tags$a(href="https://www.tiktok.com/@kofi.dence?is_from_webapp=1&sender_device=pc", target="_blank", class="social-link-btn social-link-tt", kof_icon("link"), "TikTok")
   )
 }
 
 social_links_order = function() {
   tags$div(class="social-links-row",
-           tags$a(href="https://www.facebook.com/share/1au4kqcApA/", target="_blank", class="social-link-btn social-link-fb", "\U0001f426 Order via Facebook"),
-           tags$a(href="https://www.instagram.com/kofi.dence", target="_blank", class="social-link-btn social-link-ig", "\U0001f4f8 Visit on Instagram"),
-           tags$a(href="https://www.tiktok.com/@kofi.dence?is_from_webapp=1&sender_device=pc", target="_blank", class="social-link-btn social-link-tt", "\U0001f3b5 TikTok")
+           tags$a(href="https://www.facebook.com/share/1au4kqcApA/", target="_blank", class="social-link-btn social-link-fb", kof_icon("link"), "Order via Facebook"),
+           tags$a(href="https://www.instagram.com/kofi.dence", target="_blank", class="social-link-btn social-link-ig", kof_icon("link"), "Visit on Instagram"),
+           tags$a(href="https://www.tiktok.com/@kofi.dence?is_from_webapp=1&sender_device=pc", target="_blank", class="social-link-btn social-link-tt", kof_icon("link"), "TikTok")
   )
 }
 
@@ -676,22 +712,22 @@ auth_ui = tags$div(id="authPage", class="auth-page",
                             tags$div(class="left-divider"),
                             tags$div(class="feature-row",
                                      tags$div(class="perk",
-                                              tags$div(class="perk-hex", tags$span(class="perk-icon", "\u2615")),
+                                              tags$div(class="perk-hex", kof_icon("cup", "perk-icon")),
                                               tags$div(class="perk-label", "Earn points"),
                                               tags$div(class="perk-desc", "on every purchase")
                                      ),
                                      tags$div(class="perk",
-                                              tags$div(class="perk-hex", tags$span(class="perk-icon", "\U0001f464")),
+                                              tags$div(class="perk-hex", kof_icon("user", "perk-icon")),
                                               tags$div(class="perk-label", "Stamp card"),
                                               tags$div(class="perk-desc", "9 stamps = free drink")
                                      ),
                                      tags$div(class="perk",
-                                              tags$div(class="perk-hex", tags$span(class="perk-icon", "\U0001f381")),
+                                              tags$div(class="perk-hex", kof_icon("gift", "perk-icon")),
                                               tags$div(class="perk-label", "Exclusive promos"),
                                               tags$div(class="perk-desc", "for members")
                                      ),
                                      tags$div(class="perk",
-                                              tags$div(class="perk-hex", tags$span(class="perk-icon", "\u2606")),
+                                              tags$div(class="perk-hex", kof_icon("star", "perk-icon")),
                                               tags$div(class="perk-label", "First visit bonus"),
                                               tags$div(class="perk-desc", "+2 points")
                                      )
@@ -887,7 +923,8 @@ server = function(input, output, session) {
   store_close_hour = reactiveVal(if (!is.null(saved$store_close_hour)) saved$store_close_hour else 0)
   store_force_close= reactiveVal(if (!is.null(saved$store_force_close))saved$store_force_close else FALSE)
   force_close_note = reactiveVal(if (!is.null(saved$force_close_note)) saved$force_close_note else "")
-  menu_items       = reactiveVal(if (!is.null(saved$menu_items))       saved$menu_items       else default_menu_items)
+  saved_menu = if (!is.null(saved$menu_items) && length(saved$menu_items) > 0) saved$menu_items else default_menu_items
+  menu_items       = reactiveVal(saved_menu)
   
   current_user  = reactiveVal(NULL)
   current_page  = reactiveVal("none")
@@ -967,7 +1004,7 @@ server = function(input, output, session) {
                       tags$div(class="vcard-top",
                                tags$div(class="vcard-brand", "KOFIDENCE"),
                                tags$div(style="display:flex;align-items:center;gap:8px;",
-                                        tags$div(class="vcard-contactless", "\U0001f4f6"),
+                                        tags$div(class="vcard-contactless", kof_icon("link")),
                                         tags$div(class="vcard-chip",
                                                  tags$svg(viewBox="0 0 36 26", xmlns="http://www.w3.org/2000/svg",
                                                           tags$rect(x="0",  y="0",  width="36", height="26", rx="3", fill="#b8922a"),
@@ -1058,9 +1095,7 @@ server = function(input, output, session) {
                    
                    tags$div(class="promo-card",
                             # Badge row: type pill
-                            tags$div(class="promo-badge",
-                                     paste(promo_type_icons[p$type], promo_type_labels[p$type])
-                            ),
+                            tags$div(class="promo-badge", promo_type_labels[p$type]),
                             # Title
                             tags$div(class="promo-title-text", p$title),
                             # Detail lines (highlighted)
@@ -1082,7 +1117,7 @@ server = function(input, output, session) {
       wrap(
         tags$div(class="dash-header",
                  tags$div(
-                   tags$div(class="dash-greet", "Good day, ", tags$span(u$name), " \u2615"),
+                   tags$div(class="dash-greet", "Good day, ", tags$span(u$name)),
                    tags$div(class="dash-sub", paste0("Card #", u$card, " - Your loyalty dashboard"))
                  ),
                  tags$button(class="dash-logout", onclick="Shiny.setInputValue('do_logout',Math.random())", "Log Out")
@@ -1102,28 +1137,27 @@ server = function(input, output, session) {
         ),
         tags$div(class="card-grid",
                  tags$div(class="dash-card", onclick="Shiny.setInputValue('go_vcard',Math.random())",
-                          tags$div(class="dash-card-icon", "\U0001f4b3"),
+                          tags$div(class="dash-card-icon", kof_icon("card")),
                           tags$div(class="dash-card-label", "My Card"),
                           tags$div(class="dash-card-hint",  "View your virtual advantage card")
                  ),
                  tags$div(class="dash-card", onclick="Shiny.setInputValue('go_menu',Math.random())",
-                          tags$div(class="dash-card-icon", "\u2615"),
+                          tags$div(class="dash-card-icon", kof_icon("menu")),
                           tags$div(class="dash-card-label", "Menu"),
                           tags$div(class="dash-card-hint",  "Browse all drinks and snacks")
                  ),
                  tags$div(class="dash-card", onclick="Shiny.setInputValue('go_delivery',Math.random())",
-                          tags$div(class="dash-card-icon", "\U0001f6d2"),
+                          tags$div(class="dash-card-icon", kof_icon("cart")),
                           tags$div(class="dash-card-label", "Delivery"),
                           tags$div(class="dash-card-hint",  "Order via Facebook or call")
                  ),
                  tags$div(class="dash-card", onclick="Shiny.setInputValue('go_points',Math.random())",
-                          tags$div(class="dash-card-icon", "\U0001f3c5"),
+                          tags$div(class="dash-card-icon", kof_icon("medal")),
                           tags$div(class="dash-card-label", "Points"),
                           tags$div(class="dash-card-hint",  "Rewards and transaction history")
                  ),
-                 # FIX: "..." icon color set to white
                  tags$div(class="dash-card", onclick="Shiny.setInputValue('go_more',Math.random())",
-                          tags$div(class="dash-card-icon", style="color:var(--white);", "\u2022\u2022\u2022"),
+                          tags$div(class="dash-card-icon", kof_icon("dots")),
                           tags$div(class="dash-card-label", "More"),
                           tags$div(class="dash-card-hint",  "Account, about us and feedback")
                  )
@@ -1151,10 +1185,10 @@ server = function(input, output, session) {
                  tags$div(class="page-section-title", "How to use your card"),
                  tags$p(style="color:var(--gray-muted);font-size:13.5px;line-height:1.8;",
                         "Show this card to our staff at Kofidence Cafe to:", tags$br(),
-                        "\u2022 Earn points on every purchase (P30 = 1 point)", tags$br(),
-                        "\u2022 Collect stamps (9 stamps = 1 FREE drink)", tags$br(),
-                        "\u2022 Redeem points for rewards", tags$br(),
-                        "\u2022 Take advantage of special promos"
+                        "- Earn points on every purchase (P30 = 1 point)", tags$br(),
+                        "- Collect stamps (9 stamps = 1 FREE drink)", tags$br(),
+                        "- Redeem points for rewards", tags$br(),
+                        "- Take advantage of special promos"
                  )
         )
       )
@@ -1170,7 +1204,7 @@ server = function(input, output, session) {
       item_rows = if (length(show_it) == 0)
         tags$p(style="color:var(--gray-muted);padding:1rem 0;", "No items found.")
       else tagList(lapply(show_it, function(it) {
-        star = if (it$cat == "Starred Drinks") " \u2605" else ""
+        star = if (it$cat == "Starred Drinks") " - Starred" else ""
         st   = if (it$avail) "Available" else "Not Available"
         sc   = if (it$avail) "menu-item-status-ok" else "menu-item-status-no"
         tags$div(class="menu-item-row",
@@ -1307,7 +1341,7 @@ server = function(input, output, session) {
                    target = "_blank",
                    rel    = "noopener noreferrer",
                    class  = "feedback-open-btn",
-                   "\U0001f4dd Open Feedback Form"
+                   kof_icon("feedback"), "Open Feedback Form"
                  )
         )
       )
@@ -1326,12 +1360,12 @@ server = function(input, output, session) {
                                               ),
                                               tags$div(style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;",
                                                        actionButton("edit_hours_btn", "Edit Hours", class="cust-action-btn", style="width:auto;margin-bottom:0;"),
-                                                       if (forced) actionButton("reopen_store_btn", "\u2705 Reopen Store",   class="force-close-btn force-close-btn-green")
-                                                       else        actionButton("force_close_btn",  "\u26a0\ufe0f Force Close", class="force-close-btn force-close-btn-red")
+                                                       if (forced) actionButton("reopen_store_btn", "Reopen Store", class="force-close-btn force-close-btn-green")
+                                                       else        actionButton("force_close_btn",  "Force Close",  class="force-close-btn force-close-btn-red")
                                               )
                                      ),
                                      if (forced) tags$div(class="forced-closed-banner",
-                                                          paste0("\u26a0\ufe0f Store is temporarily closed.", if (nchar(fnote) > 0) paste0(" Reason: ", fnote) else "")
+                                                          paste0("Store is temporarily closed.", if (nchar(fnote) > 0) paste0(" Reason: ", fnote) else "")
                                      )
       )
       wrap(
@@ -1342,7 +1376,7 @@ server = function(input, output, session) {
                  actionButton("admin_customers", "Customer List",        class="admin-btn"),
                  actionButton("admin_history",   "Transaction History",  class="admin-btn"),
                  actionButton("admin_promos",    "Promo Management",     class="admin-btn"),
-                 actionButton("admin_feedback",  "\U0001f4cb View Feedback", class="admin-btn")
+                 actionButton("admin_feedback",  "View Feedback", class="admin-btn")
         ),
         actionButton("admin_logout", "Log Out", class="back-btn")
       )
@@ -1350,14 +1384,14 @@ server = function(input, output, session) {
     } else if (pg == "admin_feedback") {
       wrap(
         actionButton("back_admin_feedback", "Back to Admin", class="back-btn"),
-        tags$div(class="page-title", "\U0001f4cb Customer Feedback"),
+        tags$div(class="page-title", "Customer Feedback"),
         tags$div(style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.5rem;align-items:center;",
-                 tags$a(href=FEEDBACK_SHEET_URL, target="_blank", class="feedback-open-btn",  "\U0001f4ca Open Google Sheets Responses"),
-                 tags$a(href=FEEDBACK_CSV_URL,   target="_blank", class="feedback-sheet-btn", "\U0001f4e5 Download as CSV")
+                 tags$a(href=FEEDBACK_SHEET_URL, target="_blank", class="feedback-open-btn",  kof_icon("link"), "Open Google Sheets Responses"),
+                 tags$a(href=FEEDBACK_CSV_URL,   target="_blank", class="feedback-sheet-btn", kof_icon("link"), "Download as CSV")
         ),
         tags$div(class="page-card",
                  tags$div(class="page-section-title", "Latest Responses (inline preview)"),
-                 tags$button(class="feedback-refresh-btn", id="fb_refresh_btn", "\u21bb Refresh Responses"),
+                 tags$button(class="feedback-refresh-btn", id="fb_refresh_btn", "Refresh Responses"),
                  tags$div(id="fb_response_area",
                           tags$p(class="feedback-loading", "Click Refresh to load the latest responses.")
                  )
@@ -1410,6 +1444,7 @@ server = function(input, output, session) {
       
     } else if (pg == "admin_food") {
       srch  = get_food_search()
+      if (length(menu_items()) == 0) menu_items(default_menu_items)
       items = menu_items()
       if (nchar(srch) > 0)
         items = Filter(function(x) grepl(srch, tolower(x$name), fixed=TRUE), items)
@@ -1418,8 +1453,10 @@ server = function(input, output, session) {
       admin_food_page(fp)
       items_page = items[page_slice(total_items, fp)]
       
-      rows = tagList(lapply(items_page, function(it) {
-        star = if (it$cat == "Starred Drinks") " \u2605" else ""
+      rows = if (length(items_page) == 0) {
+        tags$p(style="color:var(--gray-muted);padding:1rem 0;", "No menu items found.")
+      } else tagList(lapply(items_page, function(it) {
+        star = if (it$cat == "Starred Drinks") " - Starred" else ""
         st   = if (it$avail) "Available" else "Not Available"
         sc   = if (it$avail) "color:#6fcf97;" else "color:#eb5757;"
         tags$div(class="admin-food-row",
@@ -1540,9 +1577,9 @@ server = function(input, output, session) {
                  if (isTRUE(t$stamp_added))                          tags$div(class="txn-stamp",     "Stamp added!"),
                  if (undone) tags$div(class="txn-undone-badge", paste("Undone", t$undone_at %||% ""))
                           ),
-                          if (!undone) tags$button(class="txn-undo-btn",
-                                                   onclick=paste0("Shiny.setInputValue('undo_txn',{idx:", orig_idx, ",ts:Math.random()})"),
-                                                   "Undo")
+                          tags$button(class="txn-undo-btn",
+                                      onclick=paste0("Shiny.setInputValue('view_txn',{idx:", orig_idx, ",ts:Math.random()})"),
+                                      "View")
                  )
         )
       }))
@@ -1579,7 +1616,7 @@ server = function(input, output, session) {
                  fluidRow(
                    column(8,
                           tags$div(class=st_cls, st_txt),
-                          tags$div(class="promo-badge", paste(promo_type_icons[p$type], promo_type_labels[p$type])),
+                          tags$div(class="promo-badge", promo_type_labels[p$type]),
                           tags$div(class="promo-title-text", paste0("[#",p$id,"] ",p$title)),
                           tagList(lapply(promo_detail_lines(p), function(ln) tags$div(class="promo-detail-text", ln))),
                           if (!is.null(p$terms) && nchar(p$terms) > 0) tags$div(class="promo-detail-text", paste("*", p$terms)),
@@ -1609,7 +1646,7 @@ server = function(input, output, session) {
   })
   
   observeEvent(input$force_close_btn, {
-    showModal(modalDialog(title="\u26a0\ufe0f Force Close Store",
+    showModal(modalDialog(title="Force Close Store",
                           tags$p(style="color:var(--gray-muted);font-size:13px;margin-bottom:1rem;","This will immediately mark the store as closed."),
                           textInput("force_close_reason","Reason (optional):",placeholder="e.g. Staff emergency"),
                           footer=tagList(modalButton("Cancel"),actionButton("confirm_force_close","Close Store Now",
@@ -1622,7 +1659,7 @@ server = function(input, output, session) {
     showNotification(if (nchar(reason)>0) paste0("Store force closed. Reason: ",reason) else "Store force closed.", type="warning", duration=5)
   })
   observeEvent(input$reopen_store_btn, {
-    showModal(modalDialog(title="\u2705 Reopen Store",
+    showModal(modalDialog(title="Reopen Store",
                           tags$p(style="color:var(--gray-muted);","Remove the temporary closure and restore normal hours?"),
                           footer=tagList(modalButton("Cancel"),actionButton("confirm_reopen","Yes, Reopen",
                                                                             style="background:rgba(111,207,151,0.2);color:#6fcf97;border:1px solid rgba(111,207,151,0.5);padding:8px 18px;border-radius:8px;cursor:pointer;")),
@@ -1746,6 +1783,11 @@ server = function(input, output, session) {
                           numericInput("ec_points_adjust","Points Adjustment (+/-)",value=0,step=1),
                           tags$p(style="color:var(--gray-muted);font-size:12px;",
                                  "Use a positive number to add points or a negative number to deduct points."),
+                          tags$div(style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;",
+                                   tags$button(type="button", class="pager-btn", onclick="Shiny.setInputValue('reset_customer_points',Math.random())", "Reset Points"),
+                                   tags$button(type="button", class="pager-btn", onclick="Shiny.setInputValue('reset_customer_stamps',Math.random())", "Reset Stamps"),
+                                   tags$button(type="button", class="pager-btn", onclick="Shiny.setInputValue('clear_customer_txns',Math.random())", "Clear Transactions")
+                          ),
                           footer=tagList(
                             tags$button(type="button", class="edit-danger-btn", onclick="Shiny.setInputValue('edit_customer_delete',Math.random())", "Delete Account"),
                             modalButton("Cancel"),
@@ -1801,6 +1843,64 @@ server = function(input, output, session) {
                           footer=tagList(modalButton("Cancel"), actionButton("confirm_delete_customer","Yes, Delete Account",
                                                                               style="background:rgba(235,87,87,0.25);color:#ff8585;border:1px solid rgba(235,87,87,0.5);padding:8px 18px;border-radius:8px;cursor:pointer;")),
                           easyClose=TRUE))
+  })
+
+  observeEvent(input$reset_customer_points, {
+    contact = session$userData$edit_customer_contact %||% ""
+    if (nchar(contact) == 0) return()
+    showModal(modalDialog(title="Reset Customer Points",
+                          tags$p("Reset this customer's active points to 0?"),
+                          footer=tagList(modalButton("Cancel"), actionButton("confirm_reset_customer_points","Yes, Reset Points",
+                                                                              style="background:rgba(200,134,29,0.2);color:var(--gold);border:1px solid rgba(242,192,99,0.45);padding:8px 18px;border-radius:8px;cursor:pointer;")),
+                          easyClose=TRUE))
+  })
+  observeEvent(input$confirm_reset_customer_points, {
+    contact = session$userData$edit_customer_contact %||% ""
+    users(lapply(users(), function(usr) {
+      if (usr$contact == contact) {
+        usr$points_log = data.frame(pts=numeric(), earned=character(), expires=character(), stringsAsFactors=FALSE)
+        if (!is.null(current_user()) && current_user()$contact == contact) current_user(usr)
+      }
+      usr
+    }))
+    removeModal()
+    showNotification("Customer points reset.", type="message", duration=3)
+  })
+  observeEvent(input$reset_customer_stamps, {
+    contact = session$userData$edit_customer_contact %||% ""
+    if (nchar(contact) == 0) return()
+    showModal(modalDialog(title="Reset Customer Stamps",
+                          tags$p("Reset this customer's stamps to 0?"),
+                          footer=tagList(modalButton("Cancel"), actionButton("confirm_reset_customer_stamps","Yes, Reset Stamps",
+                                                                              style="background:rgba(200,134,29,0.2);color:var(--gold);border:1px solid rgba(242,192,99,0.45);padding:8px 18px;border-radius:8px;cursor:pointer;")),
+                          easyClose=TRUE))
+  })
+  observeEvent(input$confirm_reset_customer_stamps, {
+    contact = session$userData$edit_customer_contact %||% ""
+    users(lapply(users(), function(usr) {
+      if (usr$contact == contact) {
+        usr$stamps = 0
+        if (!is.null(current_user()) && current_user()$contact == contact) current_user(usr)
+      }
+      usr
+    }))
+    removeModal()
+    showNotification("Customer stamps reset.", type="message", duration=3)
+  })
+  observeEvent(input$clear_customer_txns, {
+    contact = session$userData$edit_customer_contact %||% ""
+    if (nchar(contact) == 0) return()
+    showModal(modalDialog(title="Clear Customer Transactions",
+                          tags$p("Remove this customer's transaction history? Points and stamps are not changed."),
+                          footer=tagList(modalButton("Cancel"), actionButton("confirm_clear_customer_txns","Yes, Clear History",
+                                                                              style="background:rgba(235,87,87,0.18);color:#ff8585;border:1px solid rgba(235,87,87,0.45);padding:8px 18px;border-radius:8px;cursor:pointer;")),
+                          easyClose=TRUE))
+  })
+  observeEvent(input$confirm_clear_customer_txns, {
+    contact = session$userData$edit_customer_contact %||% ""
+    all_transactions(Filter(function(t) t$contact != contact, all_transactions()))
+    removeModal()
+    showNotification("Customer transaction history cleared.", type="message", duration=3)
   })
 
   observeEvent(input$edit_food, {
@@ -1890,6 +1990,67 @@ server = function(input, output, session) {
     session$userData$delete_customer_contact = NULL
     removeModal()
     showNotification(paste("Deleted account:", if (length(target)>0) target[[1]]$name else contact), type="message", duration=4)
+  })
+
+  observeEvent(input$view_txn, {
+    idx = as.integer(input$view_txn$idx %||% NA)
+    txns = all_transactions()
+    if (is.na(idx) || idx < 1 || idx > length(txns)) { showNotification("Transaction not found.", type="error"); return() }
+    t = txns[[idx]]
+    session$userData$view_txn_idx = idx
+    detail = tagList(
+      tags$p(paste("Customer:", t$name)),
+      tags$p(paste("Contact:", t$contact)),
+      tags$p(paste("Date:", t$datetime)),
+      if (!is.null(t$amount) && t$amount > 0) tags$p(paste0("Amount: P", t$amount)),
+      if (!is.null(t$pts_earned) && t$pts_earned > 0) tags$p(paste0("Points earned: +", t$pts_earned)),
+      if (!is.null(t$pts_deducted) && t$pts_deducted > 0) tags$p(paste0("Points used: -", t$pts_deducted, " (", t$reward_redeemed, ")")),
+      if (isTRUE(t$stamp_added)) tags$p("Stamp added"),
+      if (isTRUE(t$undone)) tags$p(style="color:var(--gray-muted);", paste("Status: Undone", t$undone_at %||% ""))
+    )
+    showModal(modalDialog(title="Transaction Details", detail,
+                          footer=tagList(
+                            if (!isTRUE(t$undone)) actionButton("modal_undo_txn","Undo Transaction",
+                                                                 style="background:rgba(200,134,29,0.2);color:var(--gold);border:1px solid rgba(242,192,99,0.45);padding:8px 18px;border-radius:8px;cursor:pointer;"),
+                            if (isTRUE(t$undone)) actionButton("modal_delete_txn","Delete Record",
+                                                               style="background:rgba(235,87,87,0.18);color:#ff8585;border:1px solid rgba(235,87,87,0.45);padding:8px 18px;border-radius:8px;cursor:pointer;"),
+                            modalButton("Close")
+                          ),
+                          easyClose=TRUE))
+  })
+  observeEvent(input$modal_undo_txn, {
+    idx = session$userData$view_txn_idx
+    removeModal()
+    txns = all_transactions()
+    if (is.null(idx) || idx < 1 || idx > length(txns)) { showNotification("Transaction not found.", type="error"); return() }
+    t = txns[[idx]]
+    showModal(modalDialog(title="Undo Transaction",
+                          tags$p(paste0("Undo transaction for ", t$name, " (", t$contact, ")?")),
+                          tags$p(style="color:var(--gray-muted);font-size:13px;",
+                                 "This reverses the points or stamp change and keeps the transaction as an audit record."),
+                          footer=tagList(modalButton("Cancel"),
+                                         actionButton("confirm_undo_txn","Yes, Undo",
+                                                      style="background:rgba(200,134,29,0.2);color:var(--gold);border:1px solid rgba(242,192,99,0.45);padding:8px 18px;border-radius:8px;cursor:pointer;")),
+                          easyClose=TRUE))
+    session$userData$undo_txn_idx = idx
+  })
+  observeEvent(input$modal_delete_txn, {
+    idx = session$userData$view_txn_idx
+    showModal(modalDialog(title="Delete Transaction Record",
+                          tags$p("Delete this already-undone transaction record?"),
+                          footer=tagList(modalButton("Cancel"), actionButton("confirm_delete_txn_record","Yes, Delete Record",
+                                                                              style="background:rgba(235,87,87,0.18);color:#ff8585;border:1px solid rgba(235,87,87,0.45);padding:8px 18px;border-radius:8px;cursor:pointer;")),
+                          easyClose=TRUE))
+  })
+  observeEvent(input$confirm_delete_txn_record, {
+    idx = as.integer(session$userData$view_txn_idx %||% NA)
+    txns = all_transactions()
+    if (!is.na(idx) && idx >= 1 && idx <= length(txns) && isTRUE(txns[[idx]]$undone)) {
+      all_transactions(txns[-idx])
+      showNotification("Transaction record deleted.", type="message", duration=3)
+    }
+    session$userData$view_txn_idx = NULL
+    removeModal()
   })
 
   observeEvent(input$undo_txn, {
@@ -2193,6 +2354,7 @@ server = function(input, output, session) {
   
   output$np_fields = renderUI({
     type  = input$np_type; if (is.null(type)) return(NULL)
+    if (length(menu_items()) == 0) menu_items(default_menu_items)
     items = menu_items()
     choice_labels = function(xs) unlist(lapply(xs, function(x) {
       label = paste0(x$name, " (", x$cat, ")")
@@ -2219,6 +2381,7 @@ server = function(input, output, session) {
     if (length(p) == 0) return(NULL)
     p = p[[1]]
     type = input$ep_type %||% p$type
+    if (length(menu_items()) == 0) menu_items(default_menu_items)
     items = menu_items()
     choice_labels = function(xs) unlist(lapply(xs, function(x) {
       label = paste0(x$name, " (", x$cat, ")")
@@ -2335,10 +2498,6 @@ server = function(input, output, session) {
       tp = Filter(function(p) p$id==p_id, updated)
       if (length(tp)>0) showNotification(if(isTRUE(tp[[1]]$visible))"Promo shown" else "Promo hidden",type="message",duration=3)
     }, ignoreInit=TRUE)
-    observeEvent(input[[paste0("pdel_",p_id)]], {
-      showModal(modalDialog(title="Delete Promo","Are you sure?",
-                            footer=tagList(modalButton("Cancel"),actionButton(paste0("pdc_",p_id),"Yes, Delete",style="background:red;color:white;")),easyClose=TRUE))
-    }, ignoreInit=TRUE)
     observeEvent(input[[paste0("pedit_",p_id)]], {
       p = Filter(function(x) x$id == p_id, promos())
       if (length(p) == 0) { showNotification("Promo not found.", type="error"); return() }
@@ -2363,10 +2522,6 @@ server = function(input, output, session) {
                               modalButton("Cancel"),
                               actionButton("save_edit_promo","Save Changes")
                             )))
-    }, ignoreInit=TRUE)
-    observeEvent(input[[paste0("pdc_",p_id)]], {
-      promos(Filter(function(p) p$id!=p_id, promos())); removeModal()
-      showNotification("Promo deleted.",type="message",duration=3)
     }, ignoreInit=TRUE)
     })
   })
