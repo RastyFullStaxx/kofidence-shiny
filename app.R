@@ -373,7 +373,8 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .perk-hex{width:72px;height:72px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;color:var(--gold);background:rgba(18,13,9,0.34);clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%);position:relative;}
 .perk-hex::before{content:'';position:absolute;inset:1px;background:linear-gradient(135deg,var(--gold),var(--amber));clip-path:inherit;z-index:0;}
 .perk-hex::after{content:'';position:absolute;inset:2px;background:rgba(18,13,9,0.78);clip-path:inherit;z-index:1;}
-.perk-icon{position:relative;z-index:2;font-size:27px;line-height:1;color:var(--gold);}
+.perk-icon{position:relative;z-index:2;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;font-size:27px;line-height:1;color:var(--gold);}
+.perk-icon svg{width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block;}
 .perk-label{color:var(--white);font-size:15px;font-weight:700;}
 .perk-desc{color:rgba(255,253,248,0.72);font-size:12.5px;}
 .right-panel{display:flex;align-items:center;justify-content:center;padding:2.5rem 1.7rem;background:linear-gradient(180deg,rgba(18,15,12,0.34),rgba(10,8,6,0.58));backdrop-filter:blur(2px);border-left:1px solid rgba(200,134,29,0.13);}
@@ -403,7 +404,7 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--gray-light);}
 .kof-icon{display:inline-flex;align-items:center;justify-content:center;color:var(--gold);line-height:1;}
 .kof-icon svg{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block;}
-.inner-page{position:relative;z-index:5;min-height:calc(100vh - 58px);padding:2rem clamp(1rem,3vw,2.5rem);background:linear-gradient(180deg,rgba(23,17,12,0.12),rgba(23,17,12,0.32));width:min(100%,1280px);margin:0 auto;}
+.inner-page{position:relative;z-index:5;min-height:calc(100vh - 58px);padding:2rem 2.5rem;background:linear-gradient(180deg,rgba(23,17,12,0.12),rgba(23,17,12,0.32));}
 .dash-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
 .dash-greet{font-family:'Playfair Display',serif;font-size:30px;color:var(--white);}
 .dash-greet span{color:var(--gold);font-style:italic;}
@@ -442,6 +443,7 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .cat-btn{display:block;width:100%;margin-bottom:6px;padding:10px 14px;text-align:left;background:rgba(255,246,234,0.045);border:1px solid rgba(242,192,99,0.18);border-radius:9px;color:rgba(255,253,248,0.72);font-family:'DM Sans',sans-serif;font-size:13.5px;cursor:pointer;transition:all 0.2s;}
 .cat-btn:hover,.cat-btn.active{background:rgba(200,134,29,0.15);border-color:rgba(200,134,29,0.4);color:var(--gold);}
 .menu-item-row{display:grid;grid-template-columns:1fr 110px 120px;align-items:center;gap:8px;background:rgba(42,25,13,0.54);border:1px solid rgba(242,192,99,0.16);border-radius:11px;padding:11px 14px;margin-bottom:8px;box-shadow:0 8px 22px rgba(16,9,4,0.14);}
+.menu-item-row.starred-row,.admin-food-row.starred-row,.page-card.starred-row{background:linear-gradient(135deg,rgba(200,134,29,0.22),rgba(74,44,23,0.66));border-color:rgba(242,192,99,0.48);box-shadow:0 10px 26px rgba(200,134,29,0.12);}
 .menu-item-name{color:var(--white);font-size:14.5px;font-weight:500;}
 .menu-item-price{color:var(--gold);font-size:14px;margin-top:2px;}
 .menu-item-status-col{display:flex;align-items:center;justify-content:center;}
@@ -453,7 +455,7 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:2rem;}
 .admin-btn{height:80px;background:var(--panel-warm);border:1px solid var(--line-gold);border-radius:14px;color:var(--white);font-family:'Playfair Display',serif;font-size:16px;cursor:pointer;transition:all 0.2s;box-shadow:0 12px 32px rgba(16,9,4,0.18);}
 .admin-btn:hover{background:rgba(200,134,29,0.12);border-color:rgba(200,134,29,0.4);}
-.admin-food-row{display:grid;grid-template-columns:minmax(0,1fr) 130px 110px;align-items:center;gap:10px;background:rgba(42,25,13,0.54);border:1px solid rgba(242,192,99,0.16);border-radius:11px;padding:11px 14px;margin-bottom:8px;box-shadow:0 8px 22px rgba(16,9,4,0.14);}
+.admin-food-row{display:grid;grid-template-columns:1fr 130px 160px;align-items:center;gap:8px;background:rgba(42,25,13,0.54);border:1px solid rgba(242,192,99,0.16);border-radius:11px;padding:11px 14px;margin-bottom:8px;box-shadow:0 8px 22px rgba(16,9,4,0.14);}
 .admin-food-status-col{display:flex;align-items:center;justify-content:center;}
 .admin-food-btn-col{display:flex;align-items:center;justify-content:flex-end;}
 .txn-card{background:rgba(42,25,13,0.54);border:1px solid rgba(242,192,99,0.16);border-radius:11px;padding:14px 16px;margin-bottom:10px;box-shadow:0 8px 22px rgba(16,9,4,0.14);}
@@ -470,12 +472,11 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .cust-name{color:var(--white);font-size:15px;font-weight:600;}
 .cust-meta{color:var(--gray-muted);font-size:12.5px;margin:2px 0;}
 .cust-pts{color:var(--gold);font-size:14px;font-weight:600;}
-.cust-card .col-sm-5{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
-.cust-action-btn{padding:7px 13px;border-radius:8px;border:1px solid rgba(242,192,99,0.3);background:rgba(200,134,29,0.12);color:var(--gold);font-size:12.5px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:0;width:min(100%,260px);transition:all 0.2s;}
+.cust-action-btn{padding:7px 12px;border-radius:8px;border:1px solid rgba(242,192,99,0.3);background:rgba(200,134,29,0.12);color:var(--gold);font-size:12.5px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:5px;width:100%;transition:all 0.2s;}
 .cust-action-btn:hover{background:rgba(200,134,29,0.24);border-color:rgba(242,192,99,0.5);}
 .cust-delete-btn{border-color:rgba(235,87,87,0.42)!important;background:rgba(235,87,87,0.1)!important;color:#ff8585!important;}
 .cust-delete-btn:hover{background:rgba(235,87,87,0.2)!important;}
-.expand-panel{background:rgba(14,9,5,0.34);border-radius:12px;padding:18px;margin:16px auto 0;border:1px solid rgba(242,192,99,0.16);max-width:820px;}
+.expand-panel{background:rgba(14,9,5,0.34);border-radius:11px;padding:14px;margin-top:12px;border:1px solid rgba(242,192,99,0.16);}
 .kof-num-input{width:100%;height:40px;border:1.5px solid rgba(200,134,29,0.25);border-radius:8px;padding:0 12px;background:rgba(255,255,255,0.06);color:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;margin-bottom:8px;}
 .kof-num-input:focus{border-color:var(--amber);}
 .kof-check-row{display:flex;align-items:center;gap:8px;color:var(--gray-muted);font-size:13px;margin-bottom:6px;}
@@ -483,7 +484,7 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .preview-box{background:rgba(200,134,29,0.08);border:1px solid rgba(200,134,29,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;}
 .preview-box p{color:var(--gray-muted);font-size:13px;margin:2px 0;}
 .preview-box .preview-total{color:var(--gold);font-weight:600;font-size:14px;}
-.confirm-btn{width:min(100%,360px);height:42px;background:linear-gradient(135deg,#1f8f50,#2cbf6a);border:1px solid rgba(255,255,255,0.12);border-radius:9px;color:white;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;display:block;margin:10px auto 0;}
+.confirm-btn{width:100%;height:42px;background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;border-radius:8px;color:white;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;}
 .promo-card{background:rgba(200,134,29,0.1);border:1px solid rgba(242,192,99,0.28);border-radius:12px;padding:16px 18px;margin-bottom:12px;box-shadow:0 10px 28px rgba(16,9,4,0.14);}
 .promo-title-text{color:var(--white);font-size:15px;font-weight:600;margin-bottom:8px;}
 .promo-detail-text{color:var(--gray-muted);font-size:13px;margin:2px 0;}
@@ -1204,12 +1205,12 @@ server = function(input, output, session) {
       item_rows = if (length(show_it) == 0)
         tags$p(style="color:var(--gray-muted);padding:1rem 0;", "No items found.")
       else tagList(lapply(show_it, function(it) {
-        star = if (it$cat == "Starred Drinks") " - Starred" else ""
         st   = if (it$avail) "Available" else "Not Available"
         sc   = if (it$avail) "menu-item-status-ok" else "menu-item-status-no"
-        tags$div(class="menu-item-row",
+        row_cls = paste("menu-item-row", if (it$cat == "Starred Drinks") "starred-row" else "")
+        tags$div(class=row_cls,
                  tags$div(
-                   tags$div(class="menu-item-name",  paste0(it$name, star)),
+                   tags$div(class="menu-item-name",  it$name),
                    tags$div(class="menu-item-price", paste0("P", it$price))
                  ),
                  tags$div(class="menu-item-status-col", tags$span(class=sc, st)),
@@ -1240,13 +1241,12 @@ server = function(input, output, session) {
     } else if (pg == "food_view") {
       food = selected_food()
       if (is.null(food)) return(wrap(actionButton("back_foodview","Back",class="back-btn"), tags$p("No food selected.")))
-      star = if (food$cat == "Starred Drinks") " - Starred Item" else ""
       sc   = if (food$avail) "color:#6fcf97;" else "color:#eb5757;"
       st   = if (food$avail) "Available" else "Not Available"
       wrap(
         actionButton("back_foodview", "Back", class="back-btn"),
-        tags$div(class="page-card",
-                 tags$div(class="page-title", paste0(food$name, star)),
+        tags$div(class=paste("page-card", if (food$cat == "Starred Drinks") "starred-row" else ""),
+                 tags$div(class="page-title", food$name),
                  tags$div(style="color:var(--gray-muted);font-size:14px;margin-bottom:8px;",  paste("Category:", food$cat)),
                  tags$div(style="font-family:'Playfair Display',serif;font-size:32px;color:var(--gold);margin-bottom:8px;", paste0("P", food$price)),
                  tags$div(style=paste0(sc,"font-size:14px;margin-bottom:1.5rem;"), st),
@@ -1456,12 +1456,12 @@ server = function(input, output, session) {
       rows = if (length(items_page) == 0) {
         tags$p(style="color:var(--gray-muted);padding:1rem 0;", "No menu items found.")
       } else tagList(lapply(items_page, function(it) {
-        star = if (it$cat == "Starred Drinks") " - Starred" else ""
         st   = if (it$avail) "Available" else "Not Available"
         sc   = if (it$avail) "color:#6fcf97;" else "color:#eb5757;"
-        tags$div(class="admin-food-row",
+        row_cls = paste("admin-food-row", if (it$cat == "Starred Drinks") "starred-row" else "")
+        tags$div(class=row_cls,
                  tags$div(
-                   tags$div(class="menu-item-name", paste0(it$name, star)),
+                   tags$div(class="menu-item-name", it$name),
                    tags$div(style="color:var(--gray-muted);font-size:12px;", paste0(it$cat, " - P", it$price))
                  ),
                  tags$div(class="admin-food-status-col",
