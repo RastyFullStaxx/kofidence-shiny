@@ -498,6 +498,13 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .promo-action-btn{width:100%;padding:7px;border-radius:7px;border:1px solid rgba(200,134,29,0.2);background:rgba(255,255,255,0.04);color:var(--gray-muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:4px;transition:all 0.2s;}
 .promo-action-btn:hover{background:rgba(200,134,29,0.12);color:var(--gold);}
 .promo-del-btn{color:#eb5757!important;}
+.edit-danger-btn{padding:8px 14px;border-radius:8px;border:1px solid rgba(235,87,87,0.42);background:rgba(235,87,87,0.1);color:#ff8585;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.edit-danger-btn:hover{background:rgba(235,87,87,0.2);}
+.pager-row{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:1.25rem 0 0;}
+.pager-btn{padding:7px 13px;border-radius:8px;border:1px solid rgba(242,192,99,0.3);background:rgba(200,134,29,0.1);color:var(--gold);font-size:12.5px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;}
+.pager-btn:hover{background:rgba(200,134,29,0.22);border-color:rgba(242,192,99,0.5);}
+.pager-btn.active{background:linear-gradient(135deg,var(--brown-dark),var(--brown-warm));border-color:rgba(242,192,99,0.45);color:var(--white);}
+.pager-note{width:100%;text-align:center;color:var(--gray-muted);font-size:12px;margin-top:3px;}
 .pts-balance-card{background:linear-gradient(135deg,rgba(74,44,23,0.95),rgba(123,74,45,0.84));border:1px solid rgba(242,192,99,0.28);border-radius:16px;padding:1.5rem 2rem;margin-bottom:1.5rem;box-shadow:0 16px 42px rgba(16,9,4,0.28);}
 .pts-name{font-family:'Playfair Display',serif;font-size:22px;color:var(--white);}
 .pts-num{font-family:'Playfair Display',serif;font-size:42px;color:var(--gold);font-weight:600;line-height:1;}
@@ -887,6 +894,10 @@ server = function(input, output, session) {
   selected_food = reactiveVal(NULL)
   selected_cat  = reactiveVal("Starred Drinks")
   expanded_cust = reactiveVal(NULL)
+  admin_food_page = reactiveVal(1)
+  admin_cust_page = reactiveVal(1)
+  admin_hist_page = reactiveVal(1)
+  admin_promo_page = reactiveVal(1)
   
   observe({
     save_data(
@@ -907,6 +918,26 @@ server = function(input, output, session) {
   get_food_search = function() tolower(trimws(if (!is.null(input$admin_food_search_box)) input$admin_food_search_box else ""))
   get_cust_search = function() tolower(trimws(if (!is.null(input$admin_search))          input$admin_search          else ""))
   get_hist_search = function() tolower(trimws(if (!is.null(input$admin_hist_search))     input$admin_hist_search     else ""))
+  page_slice = function(n, page, per_page=10) {
+    if (n <= 0) return(integer(0))
+    max_page = max(1, ceiling(n / per_page))
+    page = max(1, min(as.integer(page %||% 1), max_page))
+    seq.int((page - 1) * per_page + 1, min(n, page * per_page))
+  }
+  pager_ui = function(total, page, input_name, per_page=10) {
+    max_page = max(1, ceiling(total / per_page))
+    page = max(1, min(as.integer(page %||% 1), max_page))
+    if (max_page <= 1) return(NULL)
+    tags$div(class="pager-row",
+             tags$button(class="pager-btn", onclick=paste0("Shiny.setInputValue('",input_name,"',",max(1,page-1),",{priority:'event'})"), "Prev"),
+             tagList(lapply(seq_len(max_page), function(pg)
+               tags$button(class=paste("pager-btn", if (pg==page) "active" else ""),
+                           onclick=paste0("Shiny.setInputValue('",input_name,"',",pg,",{priority:'event'})"), pg)
+             )),
+             tags$button(class="pager-btn", onclick=paste0("Shiny.setInputValue('",input_name,"',",min(max_page,page+1),",{priority:'event'})"), "Next"),
+             tags$div(class="pager-note", paste0("Showing ", ((page-1)*per_page)+1, "-", min(total, page*per_page), " of ", total))
+    )
+  }
   
   hours_status_widget = function() {
     oh = store_open_hour(); ch = store_close_hour()
@@ -1382,12 +1413,15 @@ server = function(input, output, session) {
       items = menu_items()
       if (nchar(srch) > 0)
         items = Filter(function(x) grepl(srch, tolower(x$name), fixed=TRUE), items)
+      total_items = length(items)
+      fp = min(admin_food_page(), max(1, ceiling(max(total_items,1)/10)))
+      admin_food_page(fp)
+      items_page = items[page_slice(total_items, fp)]
       
-      rows = tagList(lapply(items, function(it) {
+      rows = tagList(lapply(items_page, function(it) {
         star = if (it$cat == "Starred Drinks") " \u2605" else ""
         st   = if (it$avail) "Available" else "Not Available"
         sc   = if (it$avail) "color:#6fcf97;" else "color:#eb5757;"
-        lb   = if (it$avail) "Mark Unavailable" else "Mark Available"
         tags$div(class="admin-food-row",
                  tags$div(
                    tags$div(class="menu-item-name", paste0(it$name, star)),
@@ -1397,7 +1431,7 @@ server = function(input, output, session) {
                           tags$span(style=paste0(sc,"font-size:12px;font-weight:600;"), st)
                  ),
                  tags$div(class="admin-food-btn-col",
-                          actionButton(paste0("tog_", it$id), lb, class="view-btn")
+                          tags$button(class="view-btn", onclick=paste0("Shiny.setInputValue('edit_food',{id:",it$id,",ts:Math.random()})"), "Edit")
                  )
         )
       }))
@@ -1409,7 +1443,8 @@ server = function(input, output, session) {
             textInput("admin_food_search_box", NULL, value=isolate(input$admin_food_search_box) %||% "",
                       placeholder="Search menu items...", width="100%")
         ),
-        rows
+        rows,
+        pager_ui(total_items, fp, "admin_food_page_go")
       )
       
     } else if (pg == "admin_customers") {
@@ -1417,9 +1452,13 @@ server = function(input, output, session) {
       all_u = users()
       if (nchar(srch) > 0)
         all_u = Filter(function(u) grepl(srch,tolower(u$name),fixed=TRUE)||grepl(srch,tolower(u$contact),fixed=TRUE), all_u)
+      total_customers = length(all_u)
+      cp = min(admin_cust_page(), max(1, ceiling(max(total_customers,1)/10)))
+      admin_cust_page(cp)
+      page_idx = page_slice(total_customers, cp)
       
       exp_c = expanded_cust()
-      rows  = tagList(lapply(seq_along(all_u), function(i) {
+      rows  = tagList(lapply(page_idx, function(i) {
         u      = all_u[[i]]; pts = valid_points(u); is_exp = !is.null(exp_c) && exp_c == u$contact
         stamp_disp = paste0(paste(rep("+", u$stamps), collapse=""), paste(rep("o", 9-u$stamps), collapse=""), " (", u$stamps, "/9)")
         expand_panel = if (is_exp) tags$div(class="expand-panel",
@@ -1447,9 +1486,9 @@ server = function(input, output, session) {
                           actionButton(paste0("tog_exp_",i),  if (is_exp) "Close" else "Transaction", class="cust-action-btn"),
                           actionButton(paste0("add_stamp_",i), "Add Stamp",     class="cust-action-btn"),
                           actionButton(paste0("redeem_",i),    "Redeem Points", class="cust-action-btn"),
-                          tags$button(class="cust-action-btn cust-delete-btn",
-                                      onclick=paste0("Shiny.setInputValue('delete_customer',{contact:'", u$contact, "',ts:Math.random()})"),
-                                      "Delete Account")
+                          tags$button(class="cust-action-btn",
+                                      onclick=paste0("Shiny.setInputValue('edit_customer',{contact:'", u$contact, "',ts:Math.random()})"),
+                                      "Edit Account")
                    )
                  ),
                  expand_panel
@@ -1466,7 +1505,8 @@ server = function(input, output, session) {
             textInput("admin_search", NULL, value=isolate(input$admin_search) %||% "",
                       placeholder="Search by name or contact...", width="100%")
         ),
-        rows
+        rows,
+        pager_ui(total_customers, cp, "admin_cust_page_go")
       )
       
     } else if (pg == "admin_history") {
@@ -1478,10 +1518,14 @@ server = function(input, output, session) {
         txns = txns[keep]
         txn_idx = txn_idx[keep]
       }
+      total_txns = length(txns)
+      hp = min(admin_hist_page(), max(1, ceiling(max(total_txns,1)/10)))
+      admin_hist_page(hp)
+      hist_page_idx = page_slice(total_txns, hp)
       
       rows = if (length(txns) == 0)
         tags$p(style="color:var(--gray-muted);", "No transactions yet.")
-      else tagList(lapply(rev(seq_along(txns)), function(k) {
+      else tagList(lapply(rev(hist_page_idx), function(k) {
         t = txns[[k]]
         orig_idx = txn_idx[[k]]
         undone = isTRUE(t$undone)
@@ -1509,7 +1553,8 @@ server = function(input, output, session) {
             textInput("admin_hist_search", NULL, value=isolate(input$admin_hist_search) %||% "",
                       placeholder="Search by name or contact...", width="100%")
         ),
-        rows
+        rows,
+        pager_ui(total_txns, hp, "admin_hist_page_go")
       )
       
     } else if (pg == "admin_promos") {
@@ -1517,10 +1562,15 @@ server = function(input, output, session) {
       n_active   = length(Filter(is_promo_active, all_promos))
       n_sched    = length(Filter(function(p) isTRUE(p$visible) && !is.null(p$start_date) && as.POSIXct(p$start_date) > Sys.time(), all_promos))
       n_inactive = length(Filter(function(p) !is_promo_active(p), all_promos))
+      promo_display = rev(all_promos)
+      total_promos = length(promo_display)
+      pp = min(admin_promo_page(), max(1, ceiling(max(total_promos,1)/10)))
+      admin_promo_page(pp)
+      promo_page = promo_display[page_slice(total_promos, pp)]
       
       promo_rows = if (length(all_promos) == 0)
         tags$p(style="color:var(--gray-muted);text-align:center;padding:2rem;", "No promos yet. Create one!")
-      else tagList(lapply(rev(all_promos), function(p) {
+      else tagList(lapply(promo_page, function(p) {
         active = is_promo_active(p)
         sched  = isTRUE(p$visible) && !is.null(p$start_date) && as.POSIXct(p$start_date) > Sys.time()
         st_cls = if (active) "status-active" else if (sched) "status-sched" else "status-inactive"
@@ -1537,7 +1587,7 @@ server = function(input, output, session) {
                    ),
                    column(4,
                           actionButton(paste0("ptv_",p$id),  if (isTRUE(p$visible)) "Hide" else "Show", class="promo-action-btn"),
-                          actionButton(paste0("pdel_",p$id), "Delete", class="promo-action-btn promo-del-btn")
+                          actionButton(paste0("pedit_",p$id), "Edit", class="promo-action-btn")
                    )
                  )
         )
@@ -1552,7 +1602,8 @@ server = function(input, output, session) {
                  tags$div(class="promo-stat", tags$div(class="promo-stat-num",n_inactive), tags$div(class="promo-stat-label","Inactive")),
                  tags$div(style="flex:1;", actionButton("create_promo","+ Create Promo",class="create-promo-btn"))
         ),
-        promo_rows
+        promo_rows,
+        pager_ui(total_promos, pp, "admin_promo_page_go")
       )
     } else NULL
   })
@@ -1674,6 +1725,141 @@ server = function(input, output, session) {
     removeModal(); current_page("none")
     session$sendCustomMessage("switchToLogin","")
     showNotification("Admin logged out.",type="message")
+  })
+
+  observeEvent(input$admin_food_page_go,   admin_food_page(as.integer(input$admin_food_page_go)))
+  observeEvent(input$admin_cust_page_go,   admin_cust_page(as.integer(input$admin_cust_page_go)))
+  observeEvent(input$admin_hist_page_go,   admin_hist_page(as.integer(input$admin_hist_page_go)))
+  observeEvent(input$admin_promo_page_go,  admin_promo_page(as.integer(input$admin_promo_page_go)))
+
+  observeEvent(input$edit_customer, {
+    contact = trimws(input$edit_customer$contact %||% "")
+    match = Filter(function(u) u$contact == contact, users())
+    if (length(match) == 0) { showNotification("Customer not found.", type="error"); return() }
+    u = match[[1]]
+    session$userData$edit_customer_contact = contact
+    showModal(modalDialog(title=paste("Edit Account -", u$name), size="m", easyClose=TRUE,
+                          textInput("ec_name","Full Name",value=u$name),
+                          textInput("ec_contact","Contact Number",value=u$contact),
+                          textInput("ec_pin","PIN",value=u$pin),
+                          numericInput("ec_stamps","Stamps",value=as.numeric(u$stamps %||% 0),min=0,max=9,step=1),
+                          numericInput("ec_points_adjust","Points Adjustment (+/-)",value=0,step=1),
+                          tags$p(style="color:var(--gray-muted);font-size:12px;",
+                                 "Use a positive number to add points or a negative number to deduct points."),
+                          footer=tagList(
+                            tags$button(type="button", class="edit-danger-btn", onclick="Shiny.setInputValue('edit_customer_delete',Math.random())", "Delete Account"),
+                            modalButton("Cancel"),
+                            actionButton("save_edit_customer","Save Changes")
+                          )))
+  })
+  
+  observeEvent(input$save_edit_customer, {
+    old_contact = session$userData$edit_customer_contact %||% ""
+    name = trimws(input$ec_name %||% "")
+    contact = trimws(input$ec_contact %||% "")
+    pin = trimws(input$ec_pin %||% "")
+    stamps = as.integer(input$ec_stamps %||% 0)
+    adjust = as.numeric(input$ec_points_adjust %||% 0)
+    if (nchar(name)==0 || nchar(contact)==0 || nchar(pin)==0) { showNotification("Please fill in name, contact, and PIN.", type="error"); return() }
+    if (nchar(contact)!=11 || grepl("[^0-9]",contact)) { showNotification("Contact must be exactly 11 digits.", type="error"); return() }
+    if (nchar(pin)<1 || nchar(pin)>6 || grepl("[^0-9]",pin)) { showNotification("PIN must be 1-6 digits.", type="error"); return() }
+    if (any(sapply(users(), function(u) u$contact == contact && u$contact != old_contact))) { showNotification("Contact already registered.", type="error"); return() }
+    updated = lapply(users(), function(usr) {
+      if (usr$contact == old_contact) {
+        usr$name = name; usr$contact = contact; usr$pin = pin; usr$stamps = max(0, min(9, stamps))
+        if (!is.na(adjust) && adjust > 0) {
+          row = data.frame(pts=adjust, earned="Admin Adjustment", expires=as.character(Sys.time()+90*86400), stringsAsFactors=FALSE)
+          usr$points_log = rbind(normalize_points_log(usr$points_log), row)
+        } else if (!is.na(adjust) && adjust < 0) {
+          usr = subtract_active_points(usr, abs(adjust))
+        }
+        if (!is.null(current_user()) && current_user()$contact == old_contact) current_user(usr)
+      }
+      usr
+    })
+    users(updated)
+    all_transactions(lapply(all_transactions(), function(t) {
+      if (t$contact == old_contact) { t$contact = contact; t$name = name }
+      t
+    }))
+    if (!is.null(expanded_cust()) && expanded_cust() == old_contact) expanded_cust(contact)
+    session$userData$edit_customer_contact = NULL
+    removeModal()
+    showNotification("Customer account updated.", type="message", duration=4)
+  })
+  
+  observeEvent(input$edit_customer_delete, {
+    contact = session$userData$edit_customer_contact %||% ""
+    if (nchar(contact) == 0) return()
+    match = Filter(function(u) u$contact == contact, users())
+    if (length(match) == 0) { showNotification("Customer not found.", type="error"); return() }
+    session$userData$delete_customer_contact = contact
+    showModal(modalDialog(title="Delete Customer Account",
+                          tags$p(paste0("Delete ", match[[1]]$name, " (", contact, ")?")),
+                          tags$p(style="color:var(--gray-muted);font-size:13px;",
+                                 "This removes the customer account and that customer's transaction history."),
+                          footer=tagList(modalButton("Cancel"), actionButton("confirm_delete_customer","Yes, Delete Account",
+                                                                              style="background:rgba(235,87,87,0.25);color:#ff8585;border:1px solid rgba(235,87,87,0.5);padding:8px 18px;border-radius:8px;cursor:pointer;")),
+                          easyClose=TRUE))
+  })
+
+  observeEvent(input$edit_food, {
+    item_id = as.integer(input$edit_food$id %||% NA)
+    found = Filter(function(x) x$id == item_id, menu_items())
+    if (length(found) == 0) { showNotification("Menu item not found.", type="error"); return() }
+    it = found[[1]]
+    session$userData$edit_food_id = item_id
+    cats = c("Starred Drinks","Espresso Iced","Espresso Hot","Ice Blended Espresso","Ice Blended Cream","Non-Coffee","Snacks","Add Ons")
+    showModal(modalDialog(title=paste("Edit Item -", it$name), size="m", easyClose=TRUE,
+                          textInput("ef_name","Item Name",value=it$name),
+                          selectInput("ef_cat","Category",choices=cats,selected=it$cat),
+                          numericInput("ef_price","Price (P)",value=it$price,min=0,step=5),
+                          checkboxInput("ef_avail","Available",value=isTRUE(it$avail)),
+                          footer=tagList(
+                            tags$button(type="button", class="edit-danger-btn", onclick="Shiny.setInputValue('edit_food_delete',Math.random())", "Delete Item"),
+                            modalButton("Cancel"),
+                            actionButton("save_edit_food","Save Changes")
+                          )))
+  })
+  
+  observeEvent(input$save_edit_food, {
+    item_id = as.integer(session$userData$edit_food_id %||% NA)
+    name = trimws(input$ef_name %||% "")
+    if (is.na(item_id) || nchar(name)==0) { showNotification("Item name is required.", type="error"); return() }
+    updated = lapply(menu_items(), function(x) {
+      if (x$id == item_id) {
+        x$name = name
+        x$cat = input$ef_cat
+        x$price = as.numeric(input$ef_price %||% x$price)
+        x$avail = isTRUE(input$ef_avail)
+      }
+      x
+    })
+    menu_items(updated)
+    session$userData$edit_food_id = NULL
+    removeModal()
+    showNotification("Menu item updated.", type="message", duration=3)
+  })
+  
+  observeEvent(input$edit_food_delete, {
+    item_id = as.integer(session$userData$edit_food_id %||% NA)
+    found = Filter(function(x) x$id == item_id, menu_items())
+    if (length(found) == 0) { showNotification("Menu item not found.", type="error"); return() }
+    showModal(modalDialog(title="Delete Menu Item",
+                          tags$p(paste0("Delete ", found[[1]]$name, "?")),
+                          tags$p(style="color:var(--gray-muted);font-size:13px;", "This removes the item from Food List and the customer Menu."),
+                          footer=tagList(modalButton("Cancel"), actionButton("confirm_delete_food","Yes, Delete Item",
+                                                                              style="background:rgba(235,87,87,0.25);color:#ff8585;border:1px solid rgba(235,87,87,0.5);padding:8px 18px;border-radius:8px;cursor:pointer;")),
+                          easyClose=TRUE))
+  })
+  
+  observeEvent(input$confirm_delete_food, {
+    item_id = as.integer(session$userData$edit_food_id %||% NA)
+    if (is.na(item_id)) { removeModal(); return() }
+    menu_items(Filter(function(x) x$id != item_id, menu_items()))
+    session$userData$edit_food_id = NULL
+    removeModal()
+    showNotification("Menu item deleted.", type="message", duration=3)
   })
 
   observeEvent(input$delete_customer, {
@@ -2026,6 +2212,38 @@ server = function(input, output, session) {
            NULL
     )
   })
+
+  output$ep_fields = renderUI({
+    pid = session$userData$edit_promo_id
+    p = Filter(function(x) x$id == pid, promos())
+    if (length(p) == 0) return(NULL)
+    p = p[[1]]
+    type = input$ep_type %||% p$type
+    items = menu_items()
+    choice_labels = function(xs) unlist(lapply(xs, function(x) {
+      label = paste0(x$name, " (", x$cat, ")")
+      setNames(label, label)
+    }))
+    drink_items = Filter(function(x) x$cat %in% c("Espresso Iced","Espresso Hot","Ice Blended Espresso","Ice Blended Cream","Non-Coffee","Starred Drinks"), items)
+    snack_items = Filter(function(x) x$cat=="Snacks", items)
+    drinks = c("(Any drink)"="", choice_labels(drink_items))
+    snacks = c("(Any snack)"="", choice_labels(snack_items))
+    all_item_choices = choice_labels(items)
+    switch(type,
+           combo   = tagList(selectInput("ep_combo_drink","Drink",choices=drinks,selected=(p$combo_items %||% c(""))[1]),
+                             selectInput("ep_combo_snack","Snack",choices=snacks,selected=(p$combo_items %||% c("",""))[2]),
+                             numericInput("ep_disc_price","Special Price (P)",value=p$disc_price %||% NA,min=0)),
+           bogo    = tagList(selectInput("ep_bogo_item","BOGO Item",choices=c("(Any)"="",all_item_choices),selected=p$bogo_item %||% "")),
+           percent = tagList(selectInput("ep_pct","Discount %",choices=c("5%"="5","10%"="10","15%"="15","20%"="20","25%"="25","30%"="30","50%"="50"),selected=as.character(p$pct %||% "10")),
+                             textInput("ep_pct_applies","Applies to",value=p$pct_applies %||% "",placeholder="e.g. All iced drinks")),
+           fixed   = tagList(selectInput("ep_fixed","Fixed Discount",choices=c("P10 off"="10","P15 off"="15","P20 off"="20","P25 off"="25","P30 off"="30","P50 off"="50"),selected=as.character(p$fixed_disc %||% "10")),
+                             selectInput("ep_fixed_items","Applies to Item(s)",choices=all_item_choices,selected=p$fixed_items %||% character(0),multiple=TRUE),
+                             numericInput("ep_fixed_min","Min Spend (P, optional)",value=p$fixed_min %||% NA,min=0)),
+           lto     = tagList(selectInput("ep_lto_item","Featured Item",choices=c("(Custom)"="",all_item_choices),selected=p$bogo_item %||% ""),
+                             numericInput("ep_lto_price","Special Price (P)",value=p$disc_price %||% NA,min=0)),
+           NULL
+    )
+  })
   
   observeEvent(input$save_promo, {
     title = trimws(input$np_title); type = input$np_type
@@ -2050,6 +2268,64 @@ server = function(input, output, session) {
     promos(append(promos(), list(new_p))); removeModal()
     showNotification(paste("Promo created:", title),type="message",duration=4)
   })
+
+  observeEvent(input$save_edit_promo, {
+    pid = session$userData$edit_promo_id
+    title = trimws(input$ep_title %||% "")
+    type = input$ep_type
+    if (is.null(pid) || nchar(title) == 0) { showNotification("Promo title required.", type="error"); return() }
+    combo_items = NULL; bogo_item = NULL; pct = NULL; fixed_disc = NULL; fixed_items = NULL
+    disc_price  = NULL; pct_applies = NULL; fixed_min = NULL
+    if      (type=="combo")   { d = input$ep_combo_drink; s = input$ep_combo_snack; combo_items = c(if(!is.null(d)&&nchar(d)>0)d else "Any drink", if(!is.null(s)&&nchar(s)>0)s else "Any snack"); disc_price = input$ep_disc_price }
+    else if (type=="bogo")    { bogo_item = input$ep_bogo_item }
+    else if (type=="percent") { pct = as.numeric(input$ep_pct); pct_applies = trimws(input$ep_pct_applies %||% "") }
+    else if (type=="fixed")   { fixed_disc = as.numeric(input$ep_fixed); fixed_items = input$ep_fixed_items; fixed_min = input$ep_fixed_min }
+    else if (type=="lto")     { bogo_item = input$ep_lto_item; disc_price = input$ep_lto_price }
+    updated = lapply(promos(), function(p) {
+      if (p$id == pid) {
+        p$type = type
+        p$title = title
+        p$terms = trimws(input$ep_terms %||% "")
+        p$combo_items = combo_items
+        p$bogo_item = bogo_item
+        p$pct = pct
+        p$pct_applies = pct_applies
+        p$fixed_disc = fixed_disc
+        p$fixed_items = fixed_items
+        p$fixed_min = fixed_min
+        p$disc_price = disc_price
+        p$start_date = as.character(as.POSIXct(paste(as.character(input$ep_start),"00:00:00")))
+        p$end_date   = as.character(as.POSIXct(paste(as.character(input$ep_end),  "23:59:59")))
+        p$recurring = input$ep_recurring
+        p$visible = isTRUE(input$ep_visible)
+      }
+      p
+    })
+    promos(updated)
+    session$userData$edit_promo_id = NULL
+    removeModal()
+    showNotification("Promo updated.", type="message", duration=3)
+  })
+  
+  observeEvent(input$edit_promo_delete, {
+    pid = session$userData$edit_promo_id
+    p = Filter(function(x) x$id == pid, promos())
+    if (length(p) == 0) { showNotification("Promo not found.", type="error"); return() }
+    showModal(modalDialog(title="Delete Promo",
+                          tags$p(paste0("Delete promo: ", p[[1]]$title, "?")),
+                          footer=tagList(modalButton("Cancel"), actionButton("confirm_delete_edit_promo","Yes, Delete Promo",
+                                                                              style="background:rgba(235,87,87,0.25);color:#ff8585;border:1px solid rgba(235,87,87,0.5);padding:8px 18px;border-radius:8px;cursor:pointer;")),
+                          easyClose=TRUE))
+  })
+  
+  observeEvent(input$confirm_delete_edit_promo, {
+    pid = session$userData$edit_promo_id
+    if (is.null(pid)) { removeModal(); return() }
+    promos(Filter(function(p) p$id != pid, promos()))
+    session$userData$edit_promo_id = NULL
+    removeModal()
+    showNotification("Promo deleted.", type="message", duration=3)
+  })
   
   lapply(1:500, function(pid) {
     local({ p_id = pid
@@ -2062,6 +2338,31 @@ server = function(input, output, session) {
     observeEvent(input[[paste0("pdel_",p_id)]], {
       showModal(modalDialog(title="Delete Promo","Are you sure?",
                             footer=tagList(modalButton("Cancel"),actionButton(paste0("pdc_",p_id),"Yes, Delete",style="background:red;color:white;")),easyClose=TRUE))
+    }, ignoreInit=TRUE)
+    observeEvent(input[[paste0("pedit_",p_id)]], {
+      p = Filter(function(x) x$id == p_id, promos())
+      if (length(p) == 0) { showNotification("Promo not found.", type="error"); return() }
+      p = p[[1]]
+      session$userData$edit_promo_id = p_id
+      start_val = if (!is.null(p$start_date) && nchar(p$start_date)>0) as.Date(as.POSIXct(p$start_date)) else Sys.Date()
+      end_val = if (!is.null(p$end_date) && nchar(p$end_date)>0) as.Date(as.POSIXct(p$end_date)) else Sys.Date()+30
+      showModal(modalDialog(title=paste("Edit Promo -", p$title), size="l", easyClose=TRUE,
+                            selectInput("ep_type","Promo Type",choices=promo_types,selected=p$type),
+                            textInput("ep_title","Promo Title",value=p$title),
+                            tags$hr(), uiOutput("ep_fields"), tags$hr(),
+                            textInput("ep_terms","Terms (optional)",value=p$terms %||% ""),
+                            tags$hr(),
+                            fluidRow(
+                              column(6, dateInput("ep_start","Start Date",value=start_val)),
+                              column(6, dateInput("ep_end",  "End Date",  value=end_val))
+                            ),
+                            selectInput("ep_recurring","Recurring",choices=recurring_opts,selected=p$recurring %||% "none"),
+                            checkboxInput("ep_visible","Visible to customers",value=isTRUE(p$visible)),
+                            footer=tagList(
+                              tags$button(type="button", class="edit-danger-btn", onclick="Shiny.setInputValue('edit_promo_delete',Math.random())", "Delete Promo"),
+                              modalButton("Cancel"),
+                              actionButton("save_edit_promo","Save Changes")
+                            )))
     }, ignoreInit=TRUE)
     observeEvent(input[[paste0("pdc_",p_id)]], {
       promos(Filter(function(p) p$id!=p_id, promos())); removeModal()
