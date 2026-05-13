@@ -895,7 +895,7 @@ ui = fluidPage(
   tags$head(
     tags$link(rel="preconnect", href="https://fonts.googleapis.com"),
     tags$link(rel="preconnect", href="https://fonts.gstatic.com", crossorigin=NA),
-    tags$link(rel="icon", type="image/svg+xml", href="favicon.svg"),
+    tags$link(rel="icon", type="image/svg+xml", href="favicon.svg?v=2"),
     tags$style(HTML(app_css)),
     tags$style(HTML("
       .shiny-input-container{margin-bottom:0!important;}
