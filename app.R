@@ -190,6 +190,41 @@ valid_log = function(user) {
   df[order(df$expires), ]
 }
 
+normalize_points_log = function(points_log) {
+  empty = data.frame(pts=numeric(), earned=character(), expires=character(), stringsAsFactors=FALSE)
+  if (is.null(points_log) || length(points_log) == 0) return(empty)
+  if (is.data.frame(points_log)) {
+    df = points_log
+  } else {
+    df = tryCatch(as.data.frame(do.call(rbind, lapply(points_log, as.data.frame)), stringsAsFactors=FALSE),
+                  error=function(e) empty)
+  }
+  if (nrow(df) == 0) return(empty)
+  if (is.null(df$pts)) df$pts = 0
+  if (is.null(df$earned)) df$earned = ""
+  if (is.null(df$expires)) df$expires = as.character(Sys.time())
+  df$pts = as.numeric(df$pts)
+  df$expires = as.character(df$expires)
+  df
+}
+
+subtract_active_points = function(user, pts_to_remove) {
+  if (is.null(user) || is.null(pts_to_remove) || is.na(pts_to_remove) || pts_to_remove <= 0) return(user)
+  df = normalize_points_log(user$points_log)
+  if (nrow(df) == 0) { user$points_log = df; return(user) }
+  expires = as.POSIXct(df$expires)
+  remaining = pts_to_remove
+  for (j in rev(seq_len(nrow(df)))) {
+    if (remaining <= 0) break
+    if (is.na(expires[j]) || expires[j] <= Sys.time() || is.na(df$pts[j]) || df$pts[j] <= 0) next
+    take = min(df$pts[j], remaining)
+    df$pts[j] = df$pts[j] - take
+    remaining = remaining - take
+  }
+  user$points_log = df[df$pts > 0, , drop=FALSE]
+  user
+}
+
 recurring_day_match = function(promo) {
   r = promo$recurring
   if (is.null(r) || r == "none") return(TRUE)
@@ -248,6 +283,9 @@ format_hour = function(h) {
 
 promo_detail_lines = function(p) {
   lines = character(0)
+  item_label = function(x, fallback) {
+    if (!is.null(x) && length(x) > 0 && nchar(trimws(paste(x, collapse=", "))) > 0) paste(x, collapse=", ") else fallback
+  }
   
   if (p$type == "combo") {
     d = if (!is.null(p$combo_items) && length(p$combo_items) >= 2)
@@ -269,7 +307,8 @@ promo_detail_lines = function(p) {
     
   } else if (p$type == "fixed") {
     disc_val = if (!is.null(p$fixed_disc) && !is.na(p$fixed_disc)) paste0("P", p$fixed_disc, " off") else ""
-    if (nchar(disc_val) > 0) lines = c(lines, paste0("\U0001f3f7\ufe0f Discount: ", disc_val))
+    fixed_items = item_label(p$fixed_items %||% p$fixed_item, "selected items")
+    if (nchar(disc_val) > 0) lines = c(lines, paste0("\U0001f3f7\ufe0f Discount: ", disc_val, " on: ", fixed_items))
     if (!is.null(p$fixed_min) && !is.na(p$fixed_min) && p$fixed_min > 0)
       lines = c(lines, paste0("\U0001f4cb Min. spend: P", p$fixed_min))
     
@@ -310,27 +349,39 @@ app_css = "
   --brown-warm:#A0622A;--amber:#C8861D;--amber-light:#E8A83C;
   --gold:#F2C063;--cream:#FAF3E8;--gray-dark:#28272A;--gray-mid:#3D3A36;
   --gray-soft:#5C5852;--gray-muted:#9C9890;--gray-light:#E8E4DC;
-  --white:#FFFDF8;--shadow-warm:rgba(44,26,14,0.35);
+  --white:#FFFDF8;--cream-warm:#FFF6EA;--panel-warm:rgba(42,25,13,0.62);
+  --line-gold:rgba(242,192,99,0.24);--shadow-warm:rgba(28,14,6,0.46);
 }
-body{font-family:'DM Sans',sans-serif;background:var(--gray-dark);min-height:100vh;}
+body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8%,rgba(100,52,18,0.22),transparent 30%),linear-gradient(135deg,#1d1b18,#29211b 48%,#1b1a18);min-height:100vh;color:var(--white);}
 .navbar,.navbar-default{display:none!important;}
 .container-fluid{padding:0!important;}
 .hex-bg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
 .hex-bg svg{width:100%;height:100%;}
-.brand-bar{position:relative;z-index:10;background:linear-gradient(90deg,var(--brown-deep),var(--brown-dark));border-bottom:2px solid var(--amber);padding:0 2rem;height:56px;display:flex;align-items:center;gap:14px;}
-.brand-logo{font-family:'Cinzel',serif;font-size:22px;font-weight:600;color:var(--gold);}
-.brand-tagline{font-size:12px;color:var(--gray-muted);font-style:italic;border-left:1px solid var(--brown-warm);padding-left:14px;}
-.auth-page{position:relative;z-index:5;min-height:calc(100vh - 56px);display:grid;grid-template-columns:1fr 420px;}
-.left-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2rem;}
-.left-title{font-family:'Playfair Display',serif;font-size:38px;font-weight:600;color:var(--white);text-align:center;line-height:1.2;margin-bottom:0.8rem;}
+.brand-bar{position:relative;z-index:10;background:linear-gradient(90deg,rgba(44,26,14,0.98),rgba(31,18,9,0.94));border-bottom:1.5px solid var(--amber);padding:0 2.1rem;min-height:58px;display:flex;align-items:center;gap:16px;box-shadow:0 10px 30px rgba(0,0,0,0.28);}
+.brand-logo{font-family:'Cinzel',serif;font-size:23px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.02em;}
+.brand-tagline{font-size:13px;color:rgba(255,253,248,0.82);border-left:1px solid rgba(242,192,99,0.45);padding-left:16px;}
+.brand-note{margin-left:auto;display:flex;align-items:center;gap:10px;color:rgba(255,253,248,0.82);font-size:12.5px;line-height:1.35;}
+.brand-note-badge{width:34px;height:38px;display:flex;align-items:center;justify-content:center;color:var(--gold);filter:drop-shadow(0 3px 10px rgba(200,134,29,0.22));}
+.brand-note-badge svg{width:34px;height:38px;display:block;}
+.auth-page{position:relative;z-index:5;min-height:calc(100vh - 58px);display:grid;grid-template-columns:minmax(0,1fr) 420px;}
+.left-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3.2rem 2rem;}
+.left-title{font-family:'Playfair Display',serif;font-size:40px;font-weight:600;color:var(--white);text-align:center;line-height:1.18;margin-bottom:0.8rem;text-shadow:0 2px 18px rgba(0,0,0,0.5);}
 .left-title span{color:var(--gold);font-style:italic;}
-.left-sub{font-size:13px;color:var(--gray-muted);font-style:italic;margin-bottom:2rem;text-align:center;}
-.left-divider{width:60px;height:1px;background:linear-gradient(90deg,transparent,var(--amber),transparent);margin:0 auto 2rem;}
-.perk{display:flex;align-items:center;gap:10px;color:var(--gray-muted);font-size:13px;margin-bottom:10px;}
-.perk-dot{width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;}
-.right-panel{display:flex;align-items:center;justify-content:center;padding:2rem 1.5rem;background:rgba(20,18,15,0.45);backdrop-filter:blur(2px);border-left:1px solid rgba(200,134,29,0.15);}
-.auth-card{background:var(--white);border-radius:20px;padding:2.5rem 2.25rem;width:100%;max-width:380px;box-shadow:0 24px 60px var(--shadow-warm);}
-.card-badge{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#FFF5E0,#FDE8B0);border:1px solid rgba(200,134,29,0.25);border-radius:30px;padding:5px 14px;font-size:12px;color:var(--brown-warm);font-weight:500;margin-bottom:1.25rem;}
+.left-sub{font-size:15px;color:rgba(255,253,248,0.72);margin-bottom:2.2rem;text-align:center;}
+.left-divider{display:none;}
+.feature-row{display:grid;grid-template-columns:repeat(4,minmax(118px,1fr));gap:0;width:min(760px,100%);margin-top:1.2rem;}
+.perk{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;color:rgba(255,253,248,0.76);font-size:13px;padding:0 18px;}
+.perk:not(:last-child){border-right:1px solid rgba(200,134,29,0.32);}
+.perk-dot{display:none;}
+.perk-hex{width:72px;height:72px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;color:var(--gold);background:rgba(18,13,9,0.34);clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%);position:relative;}
+.perk-hex::before{content:'';position:absolute;inset:1px;background:linear-gradient(135deg,var(--gold),var(--amber));clip-path:inherit;z-index:0;}
+.perk-hex::after{content:'';position:absolute;inset:2px;background:rgba(18,13,9,0.78);clip-path:inherit;z-index:1;}
+.perk-icon{position:relative;z-index:2;font-size:27px;line-height:1;color:var(--gold);}
+.perk-label{color:var(--white);font-size:15px;font-weight:700;}
+.perk-desc{color:rgba(255,253,248,0.72);font-size:12.5px;}
+.right-panel{display:flex;align-items:center;justify-content:center;padding:2.5rem 1.7rem;background:linear-gradient(180deg,rgba(18,15,12,0.34),rgba(10,8,6,0.58));backdrop-filter:blur(2px);border-left:1px solid rgba(200,134,29,0.13);}
+.auth-card{background:linear-gradient(145deg,#fffaf3,#f8ecdc);border:1px solid rgba(242,192,99,0.24);border-radius:24px;padding:2.35rem 2.15rem;width:100%;max-width:382px;box-shadow:0 26px 70px rgba(23,12,5,0.54),0 0 0 1px rgba(255,255,255,0.5) inset;}
+.card-badge{display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,#FFE9BA,#F7D490);box-shadow:0 8px 18px rgba(160,98,42,0.15);border:1px solid rgba(200,134,29,0.18);border-radius:30px;padding:6px 15px;font-size:12px;color:#87521f;font-weight:600;margin-bottom:1.25rem;}
 .auth-tabs{display:flex;border-bottom:1.5px solid var(--gray-light);margin-bottom:2rem;}
 .auth-tab-btn{flex:1;background:none;border:none;padding:0.6rem 0;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--gray-muted);cursor:pointer;position:relative;transition:color 0.2s;}
 .auth-tab-btn::after{content:'';position:absolute;bottom:-1.5px;left:0;right:0;height:2px;background:var(--brown-warm);transform:scaleX(0);transition:transform 0.2s;}
@@ -341,33 +392,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--gray-dark);min-height:100
 .form-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--brown-deep);margin-bottom:0.3rem;}
 .form-sub{font-size:12px;color:var(--gray-muted);font-style:italic;margin-bottom:1.5rem;}
 .kof-label{display:block;font-size:11.5px;font-weight:500;color:var(--gray-soft);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.4rem;margin-top:1rem;}
-.kof-input{width:100%;height:44px;border:1.5px solid var(--gray-light);border-radius:10px;padding:0 14px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--brown-deep);background:var(--cream);outline:none;transition:border-color 0.2s;}
-.kof-input:focus{border-color:var(--brown-warm);background:var(--white);}
+.kof-input{width:100%;height:46px;border:1.5px solid rgba(74,44,23,0.18);border-radius:10px;padding:0 14px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--brown-deep);background:#fbf1e6;outline:none;transition:border-color 0.2s,box-shadow 0.2s,background 0.2s;}
+.kof-input:focus{border-color:var(--amber);background:var(--white);box-shadow:0 0 0 3px rgba(200,134,29,0.12);}
 .terms-row{display:flex;align-items:flex-start;gap:10px;margin:1.2rem 0;}
 .terms-row input[type=checkbox]{width:16px;height:16px;margin-top:3px;accent-color:var(--brown-warm);}
 .terms-row label{font-size:12.5px;color:var(--gray-soft);line-height:1.5;cursor:pointer;}
 .terms-row a{color:var(--brown-warm);text-decoration:none;font-weight:500;}
-.btn-primary{width:100%;height:46px;background:linear-gradient(135deg,var(--brown-dark),var(--brown-warm));border:none;border-radius:10px;color:var(--gold);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;margin-top:1rem;margin-bottom:0.75rem;transition:opacity 0.2s;}
-.btn-primary:hover{opacity:0.88;}
+.btn-primary{width:100%;height:46px;background:linear-gradient(135deg,#241104 0%,#6f3d0f 54%,#a76013 100%);border:none;border-radius:10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-top:1rem;margin-bottom:0.75rem;transition:transform 0.18s,filter 0.18s,box-shadow 0.18s;box-shadow:0 10px 22px rgba(98,52,14,0.22);}
+.btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px);}
 .btn-secondary{width:100%;height:40px;background:none;border:1.5px solid var(--gray-light);border-radius:10px;color:var(--gray-soft);font-family:'DM Sans',sans-serif;font-size:13.5px;cursor:pointer;transition:border-color 0.2s,color 0.2s;}
 .btn-secondary:hover{border-color:var(--brown-warm);color:var(--brown-warm);}
 .or-divider{display:flex;align-items:center;gap:10px;margin:0.75rem 0;font-size:11px;color:var(--gray-muted);}
 .or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--gray-light);}
-.inner-page{position:relative;z-index:5;min-height:calc(100vh - 56px);padding:2rem 2.5rem;}
+.inner-page{position:relative;z-index:5;min-height:calc(100vh - 58px);padding:2rem 2.5rem;background:linear-gradient(180deg,rgba(23,17,12,0.12),rgba(23,17,12,0.32));}
 .dash-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
 .dash-greet{font-family:'Playfair Display',serif;font-size:30px;color:var(--white);}
 .dash-greet span{color:var(--gold);font-style:italic;}
 .dash-sub{font-size:13px;color:var(--gray-muted);margin-top:4px;font-style:italic;}
-.dash-logout{background:rgba(255,255,255,0.06);border:1px solid rgba(200,134,29,0.25);color:var(--gray-muted);border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.dash-logout{background:rgba(255,246,234,0.06);border:1px solid var(--line-gold);color:rgba(255,253,248,0.72);border-radius:10px;padding:8px 18px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;}
 .dash-logout:hover{border-color:var(--amber);color:var(--amber);}
-.points-banner{background:linear-gradient(135deg,var(--brown-dark),var(--brown-mid));border:1px solid rgba(200,134,29,0.3);border-radius:16px;padding:1.75rem 2rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;}
+.points-banner{background:linear-gradient(135deg,rgba(74,44,23,0.95),rgba(123,74,45,0.84));border:1px solid rgba(242,192,99,0.28);border-radius:16px;padding:1.75rem 2rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;box-shadow:0 16px 42px rgba(16,9,4,0.28);}
 .points-label{font-size:11px;color:rgba(250,240,220,0.6);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;}
 .points-value{font-family:'Playfair Display',serif;font-size:40px;color:var(--gold);font-weight:600;line-height:1;}
 .points-hint{font-size:12px;color:rgba(250,240,220,0.5);margin-top:4px;font-style:italic;}
 .stamp-row{display:flex;gap:8px;flex-wrap:wrap;}
 .stamp{width:34px;height:34px;border-radius:50%;border:2px solid rgba(200,134,29,0.4);display:flex;align-items:center;justify-content:center;font-size:15px;}
 .stamp.filled{background:var(--amber);border-color:var(--amber);}
-.hours-banner{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(200,134,29,0.2);border-radius:12px;padding:12px 18px;margin-bottom:1.5rem;flex-wrap:wrap;}
+.hours-banner{display:flex;align-items:center;gap:14px;background:var(--panel-warm);border:1px solid var(--line-gold);border-radius:14px;padding:13px 18px;margin-bottom:1.5rem;flex-wrap:wrap;box-shadow:0 12px 34px rgba(16,9,4,0.2);}
 .hours-status-open{display:inline-flex;align-items:center;gap:6px;background:rgba(111,207,151,0.15);border:1px solid rgba(111,207,151,0.4);border-radius:20px;padding:4px 12px;font-size:13px;color:#6fcf97;font-weight:600;}
 .hours-status-closed{display:inline-flex;align-items:center;gap:6px;background:rgba(235,87,87,0.12);border:1px solid rgba(235,87,87,0.35);border-radius:20px;padding:4px 12px;font-size:13px;color:#eb5757;font-weight:600;}
 .hours-status-forced-closed{display:inline-flex;align-items:center;gap:6px;background:rgba(235,87,87,0.2);border:1px solid rgba(235,87,87,0.6);border-radius:20px;padding:4px 12px;font-size:13px;color:#ff7070;font-weight:700;}
@@ -378,46 +429,53 @@ body{font-family:'DM Sans',sans-serif;background:var(--gray-dark);min-height:100
 .hours-time{color:var(--gold);font-weight:500;}
 .forced-closed-banner{background:rgba(235,87,87,0.12);border:1px solid rgba(235,87,87,0.4);border-radius:10px;padding:10px 16px;margin-bottom:1rem;color:#ff7070;font-size:13px;font-weight:600;}
 .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:2rem;}
-.dash-card{background:rgba(255,255,255,0.04);border:1px solid rgba(200,134,29,0.18);border-radius:16px;padding:1.5rem;cursor:pointer;transition:background 0.2s,border-color 0.2s,transform 0.15s;}
-.dash-card:hover{background:rgba(255,255,255,0.08);border-color:rgba(200,134,29,0.4);transform:translateY(-2px);}
+.dash-card{background:var(--panel-warm);border:1px solid var(--line-gold);border-radius:14px;padding:1.5rem;cursor:pointer;transition:background 0.2s,border-color 0.2s,transform 0.15s,box-shadow 0.2s;box-shadow:0 12px 32px rgba(16,9,4,0.18);}
+.dash-card:hover{background:rgba(74,44,23,0.68);border-color:rgba(242,192,99,0.46);transform:translateY(-2px);box-shadow:0 18px 42px rgba(16,9,4,0.28);}
 .dash-card-icon{font-size:28px;margin-bottom:0.75rem;}
 .dash-card-label{font-family:'Playfair Display',serif;font-size:16px;color:var(--white);font-weight:600;margin-bottom:0.25rem;}
 .dash-card-hint{font-size:12.5px;color:var(--gray-muted);font-style:italic;}
-.page-card{background:rgba(255,255,255,0.04);border:1px solid rgba(200,134,29,0.18);border-radius:16px;padding:1.5rem 2rem;margin-bottom:1.5rem;}
+.page-card{background:var(--panel-warm);border:1px solid var(--line-gold);border-radius:14px;padding:1.5rem 2rem;margin-bottom:1.5rem;box-shadow:0 14px 36px rgba(16,9,4,0.2);}
 .page-title{font-family:'Playfair Display',serif;font-size:26px;color:var(--white);margin-bottom:1rem;}
 .page-section-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold);margin-bottom:0.75rem;}
-.back-btn{background:rgba(200,134,29,0.12);border:1px solid rgba(200,134,29,0.3);color:var(--gold);border-radius:8px;padding:8px 16px;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:1.5rem;transition:background 0.2s;}
-.back-btn:hover{background:rgba(200,134,29,0.22);}
+.back-btn{background:rgba(200,134,29,0.14);border:1px solid rgba(242,192,99,0.32);color:var(--gold);border-radius:10px;padding:8px 16px;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:1.5rem;transition:all 0.2s;}
+.back-btn:hover{background:rgba(200,134,29,0.25);border-color:rgba(242,192,99,0.52);}
 .menu-layout{display:grid;grid-template-columns:200px 1fr;gap:1.5rem;}
-.cat-btn{display:block;width:100%;margin-bottom:6px;padding:10px 14px;text-align:left;background:rgba(255,255,255,0.04);border:1px solid rgba(200,134,29,0.15);border-radius:8px;color:var(--gray-muted);font-family:'DM Sans',sans-serif;font-size:13.5px;cursor:pointer;transition:all 0.2s;}
+.cat-btn{display:block;width:100%;margin-bottom:6px;padding:10px 14px;text-align:left;background:rgba(255,246,234,0.045);border:1px solid rgba(242,192,99,0.18);border-radius:9px;color:rgba(255,253,248,0.72);font-family:'DM Sans',sans-serif;font-size:13.5px;cursor:pointer;transition:all 0.2s;}
 .cat-btn:hover,.cat-btn.active{background:rgba(200,134,29,0.15);border-color:rgba(200,134,29,0.4);color:var(--gold);}
-.menu-item-row{display:grid;grid-template-columns:1fr 110px 120px;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(200,134,29,0.12);border-radius:10px;padding:10px 14px;margin-bottom:8px;}
+.menu-item-row{display:grid;grid-template-columns:1fr 110px 120px;align-items:center;gap:8px;background:rgba(42,25,13,0.54);border:1px solid rgba(242,192,99,0.16);border-radius:11px;padding:11px 14px;margin-bottom:8px;box-shadow:0 8px 22px rgba(16,9,4,0.14);}
 .menu-item-name{color:var(--white);font-size:14.5px;font-weight:500;}
 .menu-item-price{color:var(--gold);font-size:14px;margin-top:2px;}
 .menu-item-status-col{display:flex;align-items:center;justify-content:center;}
 .menu-item-btn-col{display:flex;align-items:center;justify-content:flex-end;}
 .menu-item-status-ok{color:#6fcf97;font-size:12px;}
 .menu-item-status-no{color:#eb5757;font-size:12px;}
-.view-btn{padding:6px 14px;background:linear-gradient(135deg,var(--brown-dark),var(--brown-warm));border:none;border-radius:6px;color:var(--gold);font-size:12.5px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.view-btn{padding:6px 14px;background:linear-gradient(135deg,var(--brown-dark),var(--brown-warm));border:1px solid rgba(242,192,99,0.18);border-radius:8px;color:var(--gold);font-size:12.5px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:filter 0.2s,transform 0.15s;}
+.view-btn:hover{filter:brightness(1.12);transform:translateY(-1px);}
 .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:2rem;}
-.admin-btn{height:80px;background:rgba(255,255,255,0.04);border:1px solid rgba(200,134,29,0.2);border-radius:14px;color:var(--white);font-family:'Playfair Display',serif;font-size:16px;cursor:pointer;transition:all 0.2s;}
+.admin-btn{height:80px;background:var(--panel-warm);border:1px solid var(--line-gold);border-radius:14px;color:var(--white);font-family:'Playfair Display',serif;font-size:16px;cursor:pointer;transition:all 0.2s;box-shadow:0 12px 32px rgba(16,9,4,0.18);}
 .admin-btn:hover{background:rgba(200,134,29,0.12);border-color:rgba(200,134,29,0.4);}
-.admin-food-row{display:grid;grid-template-columns:1fr 130px 160px;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(200,134,29,0.12);border-radius:10px;padding:10px 14px;margin-bottom:8px;}
+.admin-food-row{display:grid;grid-template-columns:1fr 130px 160px;align-items:center;gap:8px;background:rgba(42,25,13,0.54);border:1px solid rgba(242,192,99,0.16);border-radius:11px;padding:11px 14px;margin-bottom:8px;box-shadow:0 8px 22px rgba(16,9,4,0.14);}
 .admin-food-status-col{display:flex;align-items:center;justify-content:center;}
 .admin-food-btn-col{display:flex;align-items:center;justify-content:flex-end;}
-.txn-card{background:rgba(255,255,255,0.04);border:1px solid rgba(200,134,29,0.12);border-radius:10px;padding:14px 16px;margin-bottom:10px;}
+.txn-card{background:rgba(42,25,13,0.54);border:1px solid rgba(242,192,99,0.16);border-radius:11px;padding:14px 16px;margin-bottom:10px;box-shadow:0 8px 22px rgba(16,9,4,0.14);}
+.txn-card.undone{opacity:0.74;border-color:rgba(156,152,144,0.22);}
+.txn-undone-badge{display:inline-block;margin-top:6px;padding:3px 9px;border-radius:20px;background:rgba(156,152,144,0.14);border:1px solid rgba(156,152,144,0.28);color:var(--gray-muted);font-size:11px;font-weight:700;}
+.txn-undo-btn{padding:6px 12px;border-radius:8px;border:1px solid rgba(242,192,99,0.3);background:rgba(200,134,29,0.12);color:var(--gold);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;}
+.txn-undo-btn:hover{background:rgba(200,134,29,0.24);}
 .txn-date{font-size:11px;color:var(--gray-muted);}
 .txn-amount{color:var(--white);font-size:14px;margin:3px 0;}
 .txn-pts-plus{color:#6fcf97;font-size:13px;margin:2px 0;}
 .txn-pts-minus{color:#eb5757;font-size:13px;margin:2px 0;}
 .txn-stamp{color:var(--amber);font-size:13px;margin:2px 0;}
-.cust-card{background:rgba(255,255,255,0.04);border:1px solid rgba(200,134,29,0.15);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+.cust-card{background:rgba(42,25,13,0.56);border:1px solid rgba(242,192,99,0.18);border-radius:12px;padding:15px 16px;margin-bottom:12px;box-shadow:0 10px 26px rgba(16,9,4,0.16);}
 .cust-name{color:var(--white);font-size:15px;font-weight:600;}
 .cust-meta{color:var(--gray-muted);font-size:12.5px;margin:2px 0;}
 .cust-pts{color:var(--gold);font-size:14px;font-weight:600;}
-.cust-action-btn{padding:7px 12px;border-radius:7px;border:1px solid rgba(200,134,29,0.3);background:rgba(200,134,29,0.1);color:var(--gold);font-size:12.5px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:5px;width:100%;transition:background 0.2s;}
-.cust-action-btn:hover{background:rgba(200,134,29,0.22);}
-.expand-panel{background:rgba(0,0,0,0.25);border-radius:10px;padding:14px;margin-top:12px;border:1px solid rgba(200,134,29,0.12);}
+.cust-action-btn{padding:7px 12px;border-radius:8px;border:1px solid rgba(242,192,99,0.3);background:rgba(200,134,29,0.12);color:var(--gold);font-size:12.5px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:5px;width:100%;transition:all 0.2s;}
+.cust-action-btn:hover{background:rgba(200,134,29,0.24);border-color:rgba(242,192,99,0.5);}
+.cust-delete-btn{border-color:rgba(235,87,87,0.42)!important;background:rgba(235,87,87,0.1)!important;color:#ff8585!important;}
+.cust-delete-btn:hover{background:rgba(235,87,87,0.2)!important;}
+.expand-panel{background:rgba(14,9,5,0.34);border-radius:11px;padding:14px;margin-top:12px;border:1px solid rgba(242,192,99,0.16);}
 .kof-num-input{width:100%;height:40px;border:1.5px solid rgba(200,134,29,0.25);border-radius:8px;padding:0 12px;background:rgba(255,255,255,0.06);color:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;margin-bottom:8px;}
 .kof-num-input:focus{border-color:var(--amber);}
 .kof-check-row{display:flex;align-items:center;gap:8px;color:var(--gray-muted);font-size:13px;margin-bottom:6px;}
@@ -426,21 +484,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--gray-dark);min-height:100
 .preview-box p{color:var(--gray-muted);font-size:13px;margin:2px 0;}
 .preview-box .preview-total{color:var(--gold);font-weight:600;font-size:14px;}
 .confirm-btn{width:100%;height:42px;background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;border-radius:8px;color:white;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;}
-.promo-card{background:rgba(200,134,29,0.08);border:1px solid rgba(200,134,29,0.25);border-radius:12px;padding:16px 18px;margin-bottom:12px;}
+.promo-card{background:rgba(200,134,29,0.1);border:1px solid rgba(242,192,99,0.28);border-radius:12px;padding:16px 18px;margin-bottom:12px;box-shadow:0 10px 28px rgba(16,9,4,0.14);}
 .promo-title-text{color:var(--white);font-size:15px;font-weight:600;margin-bottom:8px;}
 .promo-detail-text{color:var(--gray-muted);font-size:13px;margin:2px 0;}
 .promo-detail-highlight{color:var(--amber-light);font-size:13.5px;font-weight:500;margin:4px 0;}
 .promo-divider{border:none;border-top:1px solid rgba(200,134,29,0.18);margin:10px 0;}
 .promo-terms-text{color:var(--gray-muted);font-size:12px;font-style:italic;margin-top:6px;}
 .promo-badge{display:inline-block;background:rgba(200,134,29,0.2);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--gold);margin-bottom:8px;}
-.admin-promo-card{background:rgba(255,255,255,0.04);border:1px solid rgba(200,134,29,0.15);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+.admin-promo-card{background:rgba(42,25,13,0.56);border:1px solid rgba(242,192,99,0.18);border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 10px 26px rgba(16,9,4,0.16);}
 .status-active{color:#6fcf97;font-size:11px;font-weight:700;}
 .status-sched{color:var(--amber-light);font-size:11px;font-weight:700;}
 .status-inactive{color:var(--gray-muted);font-size:11px;font-weight:700;}
 .promo-action-btn{width:100%;padding:7px;border-radius:7px;border:1px solid rgba(200,134,29,0.2);background:rgba(255,255,255,0.04);color:var(--gray-muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:4px;transition:all 0.2s;}
 .promo-action-btn:hover{background:rgba(200,134,29,0.12);color:var(--gold);}
 .promo-del-btn{color:#eb5757!important;}
-.pts-balance-card{background:linear-gradient(135deg,var(--brown-dark),var(--brown-mid));border:1px solid rgba(200,134,29,0.3);border-radius:16px;padding:1.5rem 2rem;margin-bottom:1.5rem;}
+.pts-balance-card{background:linear-gradient(135deg,rgba(74,44,23,0.95),rgba(123,74,45,0.84));border:1px solid rgba(242,192,99,0.28);border-radius:16px;padding:1.5rem 2rem;margin-bottom:1.5rem;box-shadow:0 16px 42px rgba(16,9,4,0.28);}
 .pts-name{font-family:'Playfair Display',serif;font-size:22px;color:var(--white);}
 .pts-num{font-family:'Playfair Display',serif;font-size:42px;color:var(--gold);font-weight:600;line-height:1;}
 .pts-card-num{font-size:12px;color:rgba(250,240,220,0.5);margin-top:4px;}
@@ -521,6 +579,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--gray-dark);min-height:100
 .modal-title-kof{font-family:'Cinzel',serif;font-size:20px;color:var(--gold);margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid rgba(200,134,29,0.2);}
 .modal-body-kof{font-size:13.5px;color:var(--gray-muted);line-height:1.75;margin-bottom:0.5rem;}
 .modal-body-kof p{margin-bottom:4px;}
+@media (max-width:960px){
+  .brand-bar{padding:0.75rem 1.1rem;min-height:auto;flex-wrap:wrap;}
+  .brand-note{width:100%;margin-left:0;justify-content:flex-end;}
+  .auth-page{grid-template-columns:1fr;}
+  .left-panel{padding:2.4rem 1.1rem 1.3rem;}
+  .right-panel{border-left:none;border-top:1px solid rgba(200,134,29,0.12);padding:1.3rem 1rem 2.4rem;}
+  .feature-row{grid-template-columns:repeat(2,minmax(130px,1fr));gap:20px 0;}
+  .perk:nth-child(2){border-right:none;}
+  .menu-layout{grid-template-columns:1fr;}
+}
+@media (max-width:640px){
+  .brand-logo{font-size:20px;}
+  .brand-tagline{font-size:12px;}
+  .brand-note{font-size:11.5px;}
+  .left-title{font-size:32px;}
+  .left-sub{font-size:13px;}
+  .k-emblem-wrap{width:132px;height:132px;margin-bottom:1.4rem;}
+  .k-emblem-wrap svg{width:132px!important;height:132px!important;}
+  .feature-row{grid-template-columns:1fr;gap:18px;}
+  .perk{border-right:none!important;}
+  .auth-card{padding:1.8rem 1.45rem;border-radius:20px;}
+  .inner-page{padding:1.35rem 1rem;}
+  .admin-grid{grid-template-columns:1fr;}
+  .menu-item-row,.admin-food-row{grid-template-columns:1fr;align-items:flex-start;}
+  .menu-item-status-col,.menu-item-btn-col,.admin-food-status-col,.admin-food-btn-col{justify-content:flex-start;}
+  .page-card{padding:1.2rem;}
+}
 "
 
 
@@ -537,7 +622,18 @@ hex_bg = tags$div(class="hex-bg",
 
 brand_bar = tags$div(class="brand-bar",
                      tags$span(class="brand-logo", "Kofidence"),
-                     tags$span(class="brand-tagline", "coffee + confidence")
+                     tags$span(class="brand-tagline", "coffee + confidence"),
+                     tags$div(class="brand-note",
+                              tags$span(class="brand-note-badge",
+                                        tags$svg(viewBox="0 0 40 44", xmlns="http://www.w3.org/2000/svg",
+                                                 tags$polygon(points="20,2 36,11 36,33 20,42 4,33 4,11", fill="rgba(34,20,9,0.72)", stroke="#C8861D", `stroke-width`="1.4"),
+                                                 tags$path(d="M20 29 C20 22 14 19 10 18 C11 24 14 28 20 29 Z", fill="none", stroke="#F2C063", `stroke-width`="1.6", `stroke-linecap`="round", `stroke-linejoin`="round"),
+                                                 tags$path(d="M20 29 C20 22 26 19 30 18 C29 24 26 28 20 29 Z", fill="none", stroke="#F2C063", `stroke-width`="1.6", `stroke-linecap`="round", `stroke-linejoin`="round"),
+                                                 tags$path(d="M20 30 L20 16", fill="none", stroke="#F2C063", `stroke-width`="1.5", `stroke-linecap`="round")
+                                        )
+                              ),
+                              tags$span("Brewed for you.", tags$br(), "Rewards for you.")
+                     )
 )
 
 grand_k_emblem = tags$svg(
@@ -571,10 +667,28 @@ auth_ui = tags$div(id="authPage", class="auth-page",
                             tags$div(class="left-title", "Where every sip", tags$br(), "builds your ", tags$span("confidence")),
                             tags$div(class="left-sub", "quality crafted - daily enjoyed"),
                             tags$div(class="left-divider"),
-                            tags$div(class="perk", tags$div(class="perk-dot"), "Earn points on every purchase"),
-                            tags$div(class="perk", tags$div(class="perk-dot"), "Stamp card: 9 stamps = free drink"),
-                            tags$div(class="perk", tags$div(class="perk-dot"), "Exclusive promos for members"),
-                            tags$div(class="perk", tags$div(class="perk-dot"), "First visit bonus: +2 points")
+                            tags$div(class="feature-row",
+                                     tags$div(class="perk",
+                                              tags$div(class="perk-hex", tags$span(class="perk-icon", "\u2615")),
+                                              tags$div(class="perk-label", "Earn points"),
+                                              tags$div(class="perk-desc", "on every purchase")
+                                     ),
+                                     tags$div(class="perk",
+                                              tags$div(class="perk-hex", tags$span(class="perk-icon", "\U0001f464")),
+                                              tags$div(class="perk-label", "Stamp card"),
+                                              tags$div(class="perk-desc", "9 stamps = free drink")
+                                     ),
+                                     tags$div(class="perk",
+                                              tags$div(class="perk-hex", tags$span(class="perk-icon", "\U0001f381")),
+                                              tags$div(class="perk-label", "Exclusive promos"),
+                                              tags$div(class="perk-desc", "for members")
+                                     ),
+                                     tags$div(class="perk",
+                                              tags$div(class="perk-hex", tags$span(class="perk-icon", "\u2606")),
+                                              tags$div(class="perk-label", "First visit bonus"),
+                                              tags$div(class="perk-desc", "+2 points")
+                                     )
+                            )
                    ),
                    tags$div(class="right-panel",
                             tags$div(class="auth-card",
@@ -731,15 +845,16 @@ ui = fluidPage(
       .shiny-input-container{margin-bottom:0!important;}
       #menu_search_box input,#admin_food_search_box input,#admin_search input,#admin_hist_search input{
         width:100%!important;height:42px!important;
-        border:1.5px solid rgba(200,134,29,0.35)!important;border-radius:10px!important;
-        padding:0 14px!important;background:rgba(255,255,255,0.07)!important;
+        border:1.5px solid rgba(242,192,99,0.32)!important;border-radius:11px!important;
+        padding:0 14px!important;background:rgba(42,25,13,0.54)!important;
         color:var(--white,#FFFDF8)!important;font-family:'DM Sans',sans-serif!important;
         font-size:14px!important;outline:none!important;margin-bottom:1rem!important;display:block!important;
+        box-shadow:0 8px 22px rgba(16,9,4,0.14)!important;
       }
       #menu_search_box input::placeholder,#admin_food_search_box input::placeholder,
       #admin_search input::placeholder,#admin_hist_search input::placeholder{color:var(--gray-muted,#9C9890)!important;}
       #menu_search_box input:focus,#admin_food_search_box input:focus,
-      #admin_search input:focus,#admin_hist_search input:focus{border-color:var(--amber,#C8861D)!important;}
+      #admin_search input:focus,#admin_hist_search input:focus{border-color:var(--gold,#F2C063)!important;box-shadow:0 0 0 3px rgba(200,134,29,0.14)!important;}
       #menu_search_box label,#admin_food_search_box label,
       #admin_search label,#admin_hist_search label{display:none!important;}
     ")),
@@ -1110,12 +1225,13 @@ server = function(input, output, session) {
       txn_html = if (length(txns) == 0)
         tags$p(style="color:var(--gray-muted);", "No transactions yet.")
       else tagList(lapply(rev(txns), function(t)
-        tags$div(class="txn-card",
+        tags$div(class=paste("txn-card", if (isTRUE(t$undone)) "undone" else ""),
                  tags$div(class="txn-date",   t$datetime),
                  if (!is.null(t$amount)       && t$amount > 0)       tags$div(class="txn-amount",    paste0("Spent: P", t$amount)),
                  if (!is.null(t$pts_earned)   && t$pts_earned > 0)   tags$div(class="txn-pts-plus",  paste0("Points earned: +", t$pts_earned)),
                  if (!is.null(t$pts_deducted) && t$pts_deducted > 0) tags$div(class="txn-pts-minus", paste0("Points used: -", t$pts_deducted, " (", t$reward_redeemed, ")")),
-                 if (isTRUE(t$stamp_added))                          tags$div(class="txn-stamp",     "Stamp added!")
+                 if (isTRUE(t$stamp_added))                          tags$div(class="txn-stamp",     "Stamp added!"),
+                 if (isTRUE(t$undone))                               tags$div(class="txn-undone-badge", paste("Undone", t$undone_at %||% ""))
         )
       ))
       wrap(
@@ -1330,7 +1446,10 @@ server = function(input, output, session) {
                    column(5,
                           actionButton(paste0("tog_exp_",i),  if (is_exp) "Close" else "Transaction", class="cust-action-btn"),
                           actionButton(paste0("add_stamp_",i), "Add Stamp",     class="cust-action-btn"),
-                          actionButton(paste0("redeem_",i),    "Redeem Points", class="cust-action-btn")
+                          actionButton(paste0("redeem_",i),    "Redeem Points", class="cust-action-btn"),
+                          tags$button(class="cust-action-btn cust-delete-btn",
+                                      onclick=paste0("Shiny.setInputValue('delete_customer',{contact:'", u$contact, "',ts:Math.random()})"),
+                                      "Delete Account")
                    )
                  ),
                  expand_panel
@@ -1353,21 +1472,36 @@ server = function(input, output, session) {
     } else if (pg == "admin_history") {
       srch = get_hist_search()
       txns = all_transactions()
-      if (nchar(srch) > 0)
-        txns = Filter(function(t) grepl(srch,tolower(t$name),fixed=TRUE)||grepl(srch,tolower(t$contact),fixed=TRUE), txns)
+      txn_idx = seq_along(txns)
+      if (nchar(srch) > 0 && length(txns) > 0) {
+        keep = sapply(txns, function(t) grepl(srch,tolower(t$name),fixed=TRUE)||grepl(srch,tolower(t$contact),fixed=TRUE))
+        txns = txns[keep]
+        txn_idx = txn_idx[keep]
+      }
       
       rows = if (length(txns) == 0)
         tags$p(style="color:var(--gray-muted);", "No transactions yet.")
-      else tagList(lapply(rev(txns), function(t)
-        tags$div(class="txn-card",
+      else tagList(lapply(rev(seq_along(txns)), function(k) {
+        t = txns[[k]]
+        orig_idx = txn_idx[[k]]
+        undone = isTRUE(t$undone)
+        tags$div(class=paste("txn-card", if (undone) "undone" else ""),
+                 tags$div(style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;",
+                          tags$div(
                  tags$div(class="cust-name",  t$name),
                  tags$div(class="txn-date",   paste(t$contact, "-", t$datetime)),
                  if (!is.null(t$amount)       && t$amount > 0)       tags$div(class="txn-amount",    paste0("Spent: P", t$amount)),
                  if (!is.null(t$pts_earned)   && t$pts_earned > 0)   tags$div(class="txn-pts-plus",  paste0("+", t$pts_earned, " pts earned")),
                  if (!is.null(t$pts_deducted) && t$pts_deducted > 0) tags$div(class="txn-pts-minus", paste0("-", t$pts_deducted, " pts (", t$reward_redeemed, ")")),
-                 if (isTRUE(t$stamp_added))                          tags$div(class="txn-stamp",     "Stamp added!")
+                 if (isTRUE(t$stamp_added))                          tags$div(class="txn-stamp",     "Stamp added!"),
+                 if (undone) tags$div(class="txn-undone-badge", paste("Undone", t$undone_at %||% ""))
+                          ),
+                          if (!undone) tags$button(class="txn-undo-btn",
+                                                   onclick=paste0("Shiny.setInputValue('undo_txn',{idx:", orig_idx, ",ts:Math.random()})"),
+                                                   "Undo")
+                 )
         )
-      ))
+      }))
       wrap(
         actionButton("back_admin_hist","Back to Admin",class="back-btn"),
         tags$div(class="page-title","Transaction History"),
@@ -1397,6 +1531,7 @@ server = function(input, output, session) {
                           tags$div(class=st_cls, st_txt),
                           tags$div(class="promo-badge", paste(promo_type_icons[p$type], promo_type_labels[p$type])),
                           tags$div(class="promo-title-text", paste0("[#",p$id,"] ",p$title)),
+                          tagList(lapply(promo_detail_lines(p), function(ln) tags$div(class="promo-detail-text", ln))),
                           if (!is.null(p$terms) && nchar(p$terms) > 0) tags$div(class="promo-detail-text", paste("*", p$terms)),
                           tags$div(class="txn-date", paste("Created:", p$created_at))
                    ),
@@ -1539,6 +1674,86 @@ server = function(input, output, session) {
     removeModal(); current_page("none")
     session$sendCustomMessage("switchToLogin","")
     showNotification("Admin logged out.",type="message")
+  })
+
+  observeEvent(input$delete_customer, {
+    d = input$delete_customer
+    contact = trimws(d$contact %||% "")
+    match = Filter(function(u) u$contact == contact, users())
+    if (length(match) == 0) { showNotification("Customer not found.", type="error"); return() }
+    u = match[[1]]
+    showModal(modalDialog(title="Delete Customer Account",
+                          tags$p(paste0("Delete ", u$name, " (", u$contact, ")?")),
+                          tags$p(style="color:var(--gray-muted);font-size:13px;",
+                                 "This removes the customer account and that customer's transaction history."),
+                          footer=tagList(modalButton("Cancel"),
+                                         actionButton("confirm_delete_customer","Yes, Delete Account",
+                                                      style="background:rgba(235,87,87,0.25);color:#ff8585;border:1px solid rgba(235,87,87,0.5);padding:8px 18px;border-radius:8px;cursor:pointer;")),
+                          easyClose=TRUE))
+    session$userData$delete_customer_contact = contact
+  })
+  
+  observeEvent(input$confirm_delete_customer, {
+    contact = session$userData$delete_customer_contact %||% ""
+    if (nchar(contact) == 0) { removeModal(); return() }
+    target = Filter(function(u) u$contact == contact, users())
+    users(Filter(function(u) u$contact != contact, users()))
+    all_transactions(Filter(function(t) t$contact != contact, all_transactions()))
+    if (!is.null(current_user()) && current_user()$contact == contact) current_user(NULL)
+    if (!is.null(expanded_cust()) && expanded_cust() == contact) expanded_cust(NULL)
+    session$userData$delete_customer_contact = NULL
+    removeModal()
+    showNotification(paste("Deleted account:", if (length(target)>0) target[[1]]$name else contact), type="message", duration=4)
+  })
+
+  observeEvent(input$undo_txn, {
+    d = input$undo_txn
+    idx = as.integer(d$idx %||% NA)
+    txns = all_transactions()
+    if (is.na(idx) || idx < 1 || idx > length(txns)) { showNotification("Transaction not found.", type="error"); return() }
+    t = txns[[idx]]
+    if (isTRUE(t$undone)) { showNotification("Transaction already undone.", type="warning"); return() }
+    showModal(modalDialog(title="Undo Transaction",
+                          tags$p(paste0("Undo transaction for ", t$name, " (", t$contact, ")?")),
+                          tags$p(style="color:var(--gray-muted);font-size:13px;",
+                                 "This reverses the points or stamp change and keeps the transaction as an audit record."),
+                          footer=tagList(modalButton("Cancel"),
+                                         actionButton("confirm_undo_txn","Yes, Undo",
+                                                      style="background:rgba(200,134,29,0.2);color:var(--gold);border:1px solid rgba(242,192,99,0.45);padding:8px 18px;border-radius:8px;cursor:pointer;")),
+                          easyClose=TRUE))
+    session$userData$undo_txn_idx = idx
+  })
+  
+  observeEvent(input$confirm_undo_txn, {
+    idx = as.integer(session$userData$undo_txn_idx %||% NA)
+    txns = all_transactions()
+    if (is.na(idx) || idx < 1 || idx > length(txns)) { removeModal(); showNotification("Transaction not found.", type="error"); return() }
+    t = txns[[idx]]
+    if (isTRUE(t$undone)) { removeModal(); showNotification("Transaction already undone.", type="warning"); return() }
+    updated_users = lapply(users(), function(usr) {
+      if (usr$contact == t$contact) {
+        if (!is.null(t$pts_earned) && t$pts_earned > 0) {
+          usr = subtract_active_points(usr, as.numeric(t$pts_earned))
+        }
+        if (!is.null(t$pts_deducted) && t$pts_deducted > 0) {
+          restore_row = data.frame(pts=as.numeric(t$pts_deducted),
+                                   earned=paste("Undo:", t$reward_redeemed %||% "Redemption"),
+                                   expires=as.character(Sys.time()+90*86400),
+                                   stringsAsFactors=FALSE)
+          usr$points_log = rbind(normalize_points_log(usr$points_log), restore_row)
+        }
+        if (isTRUE(t$stamp_added)) usr$stamps = max(0, as.numeric(usr$stamps %||% 0) - 1)
+        if (!is.null(current_user()) && current_user()$contact == usr$contact) current_user(usr)
+      }
+      usr
+    })
+    users(updated_users)
+    txns[[idx]]$undone = TRUE
+    txns[[idx]]$undone_at = ph_time()
+    all_transactions(txns)
+    session$userData$undo_txn_idx = NULL
+    removeModal()
+    showNotification("Transaction undone.", type="message", duration=4)
   })
   
   cats_map = list(
@@ -1793,14 +2008,21 @@ server = function(input, output, session) {
   output$np_fields = renderUI({
     type  = input$np_type; if (is.null(type)) return(NULL)
     items = menu_items()
-    drinks = c("(Any drink)"="", unlist(lapply(Filter(function(x) x$cat %in% c("Espresso Iced","Espresso Hot","Ice Blended Espresso","Ice Blended Cream","Non-Coffee"),items), function(x) x$name)))
-    snacks = c("(Any snack)"="", unlist(lapply(Filter(function(x) x$cat=="Snacks",items), function(x) x$name)))
+    choice_labels = function(xs) unlist(lapply(xs, function(x) {
+      label = paste0(x$name, " (", x$cat, ")")
+      setNames(label, label)
+    }))
+    drink_items = Filter(function(x) x$cat %in% c("Espresso Iced","Espresso Hot","Ice Blended Espresso","Ice Blended Cream","Non-Coffee","Starred Drinks"), items)
+    snack_items = Filter(function(x) x$cat=="Snacks", items)
+    drinks = c("(Any drink)"="", choice_labels(drink_items))
+    snacks = c("(Any snack)"="", choice_labels(snack_items))
+    all_item_choices = choice_labels(items)
     switch(type,
            combo   = tagList(selectInput("np_combo_drink","Drink",choices=drinks), selectInput("np_combo_snack","Snack",choices=snacks), numericInput("np_disc_price","Special Price (P)",value=NA,min=0)),
-           bogo    = tagList(selectInput("np_bogo_item","BOGO Item",choices=c("(Any)"="",drinks[-1]))),
+           bogo    = tagList(selectInput("np_bogo_item","BOGO Item",choices=c("(Any)"="",all_item_choices))),
            percent = tagList(selectInput("np_pct","Discount %",choices=c("5%"="5","10%"="10","15%"="15","20%"="20","25%"="25","30%"="30","50%"="50")), textInput("np_pct_applies","Applies to",placeholder="e.g. All iced drinks")),
-           fixed   = tagList(selectInput("np_fixed","Fixed Discount",choices=c("P10 off"="10","P15 off"="15","P20 off"="20","P25 off"="25","P30 off"="30","P50 off"="50")), numericInput("np_fixed_min","Min Spend (P, optional)",value=NA,min=0)),
-           lto     = tagList(selectInput("np_lto_item","Featured Item",choices=c("(Custom)"="",drinks[-1])), numericInput("np_lto_price","Special Price (P)",value=NA,min=0)),
+           fixed   = tagList(selectInput("np_fixed","Fixed Discount",choices=c("P10 off"="10","P15 off"="15","P20 off"="20","P25 off"="25","P30 off"="30","P50 off"="50")), selectInput("np_fixed_items","Applies to Item(s)",choices=all_item_choices,multiple=TRUE), numericInput("np_fixed_min","Min Spend (P, optional)",value=NA,min=0)),
+           lto     = tagList(selectInput("np_lto_item","Featured Item",choices=c("(Custom)"="",all_item_choices)), numericInput("np_lto_price","Special Price (P)",value=NA,min=0)),
            NULL
     )
   })
@@ -1809,18 +2031,18 @@ server = function(input, output, session) {
     title = trimws(input$np_title); type = input$np_type
     if (nchar(title) == 0) { showNotification("Title required!",type="error"); return() }
     pid = promo_id_ctr(); promo_id_ctr(pid+1)
-    combo_items = NULL; bogo_item = NULL; pct = NULL; fixed_disc = NULL
+    combo_items = NULL; bogo_item = NULL; pct = NULL; fixed_disc = NULL; fixed_items = NULL
     disc_price  = NULL; pct_applies = NULL; fixed_min = NULL
     if      (type=="combo")   { d = input$np_combo_drink; s = input$np_combo_snack; combo_items = c(if(!is.null(d)&&nchar(d)>0)d else "Any drink", if(!is.null(s)&&nchar(s)>0)s else "Any snack"); disc_price = input$np_disc_price }
     else if (type=="bogo")    { bogo_item = input$np_bogo_item }
     else if (type=="percent") { pct = as.numeric(input$np_pct); pct_applies = trimws(input$np_pct_applies) }
-    else if (type=="fixed")   { fixed_disc = as.numeric(input$np_fixed); fixed_min = input$np_fixed_min }
+    else if (type=="fixed")   { fixed_disc = as.numeric(input$np_fixed); fixed_items = input$np_fixed_items; fixed_min = input$np_fixed_min }
     else if (type=="lto")     { bogo_item = input$np_lto_item; disc_price = input$np_lto_price }
     new_p = list(
       id=pid, type=type, title=title,
       terms=trimws(if(!is.null(input$np_terms))input$np_terms else ""),
       combo_items=combo_items, bogo_item=bogo_item, pct=pct, pct_applies=pct_applies,
-      fixed_disc=fixed_disc, fixed_min=fixed_min, disc_price=disc_price,
+      fixed_disc=fixed_disc, fixed_items=fixed_items, fixed_min=fixed_min, disc_price=disc_price,
       start_date=as.character(as.POSIXct(paste(as.character(input$np_start),"00:00:00"))),
       end_date  =as.character(as.POSIXct(paste(as.character(input$np_end),  "23:59:59"))),
       recurring=input$np_recurring, visible=isTRUE(input$np_visible), created_at=ph_time()
