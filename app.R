@@ -591,8 +591,10 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
 .modal-body-kof{font-size:13.5px;color:var(--gray-muted);line-height:1.75;margin-bottom:0.5rem;}
 .modal-body-kof p{margin-bottom:4px;}
 @media (max-width:960px){
-  .brand-bar{padding:0.75rem 1.1rem;min-height:auto;flex-wrap:wrap;}
-  .brand-note{width:100%;margin-left:0;justify-content:flex-end;}
+  .brand-bar{padding:0.55rem 0.85rem;min-height:auto;flex-wrap:nowrap;gap:10px;}
+  .brand-logo{flex:0 0 auto;white-space:nowrap;}
+  .brand-tagline{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:10px;}
+  .brand-note{width:auto;margin-left:auto;justify-content:flex-end;flex:0 1 auto;white-space:nowrap;}
   .auth-page{grid-template-columns:1fr;}
   .left-panel{padding:2.4rem 1.1rem 1.3rem;}
   .right-panel{border-left:none;border-top:1px solid rgba(200,134,29,0.12);padding:1.3rem 1rem 2.4rem;}
@@ -603,14 +605,23 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 15% 8
   .cust-action-btn{width:100%;}
 }
 @media (max-width:640px){
-  .brand-logo{font-size:20px;}
-  .brand-tagline{font-size:12px;}
-  .brand-note{font-size:11.5px;}
+  .brand-bar{padding:0.5rem 0.65rem;gap:7px;}
+  .brand-logo{font-size:16px;}
+  .brand-tagline{font-size:10.5px;padding-left:8px;}
+  .brand-note{font-size:9.5px;line-height:1.2;gap:5px;}
+  .brand-note-badge{width:24px;height:27px;flex:0 0 24px;}
+  .brand-note-badge svg{width:24px;height:27px;}
   .left-title{font-size:32px;}
   .left-sub{font-size:13px;}
   .k-emblem-wrap{width:132px;height:132px;margin-bottom:1.4rem;}
   .k-emblem-wrap svg{width:132px!important;height:132px!important;}
-  .feature-row{grid-template-columns:1fr;gap:18px;}
+  .feature-row{grid-template-columns:repeat(4,minmax(0,1fr));gap:0;width:100%;margin-top:1rem;}
+  .perk{gap:5px;padding:0 4px;min-width:0;}
+  .perk-hex{width:48px;height:48px;margin-bottom:4px;}
+  .perk-icon{width:24px;height:24px;font-size:20px;}
+  .perk-icon svg{width:24px;height:24px;stroke-width:1.7;}
+  .perk-label{font-size:11px;line-height:1.15;}
+  .perk-desc{font-size:9.5px;line-height:1.2;}
   .perk{border-right:none!important;}
   .auth-card{padding:1.8rem 1.45rem;border-radius:20px;}
   .inner-page{padding:1.35rem 1rem;}
@@ -884,6 +895,7 @@ ui = fluidPage(
   tags$head(
     tags$link(rel="preconnect", href="https://fonts.googleapis.com"),
     tags$link(rel="preconnect", href="https://fonts.gstatic.com", crossorigin=NA),
+    tags$link(rel="icon", type="image/svg+xml", href="favicon.svg"),
     tags$style(HTML(app_css)),
     tags$style(HTML("
       .shiny-input-container{margin-bottom:0!important;}
